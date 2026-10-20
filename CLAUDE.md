@@ -38,7 +38,11 @@ ve açık temada koyu tutulan "beyaz" otomatik türetilir. Temalar Ayarlar > Gö
 
 ## Çizim (WebGL)
 
-Terminaller `@xterm/addon-webgl` ile çizilir; blok karakterleri (█ ▐ ▛ ▜, Claude Code maskotu) hücreyi boşluksuz
+Terminaller WebGL eklentisiyle çizilir. Eklenti `node_modules`'tan değil, iki hata düzeltmesi yapılmış kopyası
+`renderer/vendor/addon-webgl.js`'ten yüklenir (dosyanın başındaki açıklamada ne değiştiği yazıyor: buzlu camda soluk/
+italik yazıların arkasındaki siyah kutular ve saydam zeminde incelen harfler). `@xterm/addon-webgl` güncellenirse
+kopyayı aynı iki değişiklikle yeniden üret ve buzlu camı koyu + açık temada soluk (`\x1b[2m`) ve italik yazıyla dene.
+Blok karakterleri (█ ▐ ▛ ▜, Claude Code maskotu) hücreyi boşluksuz
 doldurur. Varsayılan DOM çizimi bunları yazı tipinden çizip aralarında boşluk bırakıyordu. Chromium en fazla 16
 WebGL alanına izin verdiği için yalnızca seçili sekmenin panelleri WebGL kullanır (`syncRenderers`, en fazla 12);
 diğer sekmeler ve gizli paneller normal çizimde bekler. `allowTransparency` yalnızca buzlu camda açık, çünkü
