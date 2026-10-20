@@ -32,6 +32,11 @@ const DEFAULTS = {
   rightClick: true,
   customShells: [],    // { id, name, file, args: [] }
   keys: {},            // değiştirilen kısayollar: { işlem: ['Ctrl+Shift+T', ...] } (keys.js)
+  // Bildirimler: bir program dikkat istediğinde (Claude Code bitti / onay bekliyor)
+  notify: true,
+  notifyToast: true,   // Windows bildirimi
+  notifyFlash: true,   // görev çubuğunda yanıp sön
+  notifyBell: true,    // zil sinyali (BEL) de sayılsın
 };
 const settings = { ...DEFAULTS };
 try {
@@ -100,6 +105,7 @@ const panesByPty = new Map();
 let shells = [];
 let paths = { home: '', desktop: '' };
 let nextTabId = 1;
+let nextPaneId = 1;
 
 const $ = (id) => document.getElementById(id);
 const workspace = $('workspace');
@@ -235,8 +241,10 @@ class Pane {
   constructor(tab) {
     this.tab = tab;
     this.parent = null;
+    this.id = nextPaneId++;
     this.ptyId = null;
     this.title = '';
+    this.attention = false;   // bildirim geldi, kullanıcı henüz bakmadı
     this.el = document.createElement('div');
     this.el.className = 'pane';
     const host = document.createElement('div');
@@ -256,6 +264,10 @@ class Pane {
       allowProposedApi: true,
       scrollback: settings.scrollback,
       theme: termTheme(),
+      // Programların yazdığı tıklanabilir bağlantılar (OSC 8): görünen yazı ile gerçek adres farklı olabilir,
+      // bu yüzden adres gösterilip sorulur ve kullanıcının tarayıcısında açılır. xterm'in kendi hali
+      // Chromium'un confirm() kutusunu ve Kabuk'un içinde yeni pencere açmayı kullanıyordu
+      linkHandler: { activate: (_e, uri) => confirmLink(uri), allowNonHttpProtocols: false },
     });
     this.fit = new FitAddon.FitAddon();
     this.term.loadAddon(this.fit);
@@ -275,6 +287,19 @@ class Pane {
     this.term.onResize(({ cols, rows }) => { this.ptyId && api.resize(this.ptyId, cols, rows); this.hintSoon(); });
     this.term.onWriteParsed(() => this.hintSoon());
     this.term.onScroll(() => this.hintSoon());
+    // Bildirim sinyalleri: zil (BEL), OSC 9 (iTerm2 / Codex), OSC 777;notify (Ghostty biçimi, Claude Code)
+    this.term.onBell(() => attend(this, { bell: true }));
+    this.term.parser.registerOscHandler(9, (d) => {
+      if (/^\d+(;|$)/.test(d)) return false;   // ConEmu komutları (9;4 ilerleme çubuğu, 9;9 klasör) bildirim değil
+      attend(this, { body: d });
+      return true;
+    });
+    this.term.parser.registerOscHandler(777, (d) => {
+      if (!d.startsWith('notify;')) return false;
+      const [, title, ...body] = d.split(';');
+      attend(this, { title, body: body.join(';') });
+      return true;
+    });
     this.term.onTitleChange((t) => {
       this.title = t;
       if (this.tab) updateTabTitle(this.tab); else renderHidden();
@@ -587,6 +612,7 @@ function activateTab(tab) {
   syncRenderers();
   leaves(tab.root).forEach((p) => p.fitSoon());
   (tab.activePane || leaves(tab.root)[0])?.term.focus();
+  markSeen();
 }
 
 function closeTab(tab) {
@@ -614,6 +640,7 @@ function updateTabTitle(tab) {
   tab.badgeEl.hidden = panes.length < 2;
   tab.badgeEl.textContent = panes.length;
   tab.el.classList.toggle('multi', panes.length > 1);
+  tab.tabEl.classList.toggle('attention', panes.some((p) => p.attention));
 }
 
 function cycleTab(dir) {
@@ -673,6 +700,76 @@ function showToast(text) {
   showToast.timer = setTimeout(() => { t.hidden = true; }, 5000);
 }
 
+// ---------- Bağlantılar ----------
+async function confirmLink(uri) {
+  if (!/^https?:\/\//i.test(uri) || KUI.isModalOpen()) return;
+  const ok = await KUI.confirm({
+    title: 'Bağlantı açılsın mı?',
+    message: `${uri}\n\nTarayıcında açılacak. Adresi tanımıyorsan açma.`,
+    ok: 'Aç',
+  });
+  if (ok) api.openLink(uri);
+}
+
+// ---------- Bildirimler ----------
+// Bir program dikkat istediğinde: o panele bakmıyorsan sekmede/panelde işaret, Windows bildirimi
+// ve görev çubuğunda yanıp sönme. Pencere açık ve o panel seçiliyse hiçbir şey çıkmaz (zaten görüyorsun)
+function attend(pane, { title = '', body = '', bell = false }) {
+  if (!settings.notify || (bell && !settings.notifyBell)) return;
+  const windowOn = document.hasFocus();
+  const onScreen = windowOn && pane.tab && pane.tab === activeTab;
+  if (onScreen && pane.tab.activePane === pane) return;
+  // Arka arkaya gelen zillerde tek bildirim (yazılı bildirimler hep gösterilir)
+  if (bell) {
+    if (Date.now() - (pane.lastBell || 0) < 4000) return;
+    pane.lastBell = Date.now();
+  }
+  pane.attention = true;
+  renderAttention();
+  if (onScreen) return;   // aynı sekmede başka panele bakıyorsun: panelin çerçevesi yanıp söner, yeter
+  const name = pane.title || pane.shellName || 'Terminal';
+  api.notify({
+    id: pane.id,
+    title: (title || name).trim(),
+    body: (body || (bell ? 'Dikkatini bekliyor.' : '')).trim() + (title && title !== name ? `\n${name}` : ''),
+    toast: settings.notifyToast,
+    flash: settings.notifyFlash,
+  });
+}
+
+// Pencereye dönülünce seçili panelin işaretini kaldır
+function markSeen() {
+  const p = activeTab?.activePane;
+  if (!p || !document.hasFocus()) return;
+  p.lastBell = 0;
+  if (p.attention) { p.attention = false; renderAttention(); }
+}
+window.addEventListener('focus', markSeen);
+
+function renderAttention() {
+  for (const t of tabs) {
+    const panes = leaves(t.root);
+    for (const p of panes) p.el.classList.toggle('attention', p.attention);
+    t.tabEl.classList.toggle('attention', panes.some((p) => p.attention));
+  }
+  $('hiddenBtn').classList.toggle('attention', hiddenPanes.some((p) => p.attention));
+}
+
+function findPane(id) {
+  let found = null;
+  forEachPane((p) => { if (p.id === id) found = p; });
+  return found;
+}
+
+// Windows bildirimine tıklanınca o terminale git
+api.onNotifyClick((id) => {
+  const pane = findPane(id);
+  if (!pane) return;
+  if (hiddenPanes.includes(pane)) { showHiddenPane(pane, 'tab'); return; }
+  activateTab(pane.tab);
+  focusPane(pane);
+});
+
 // ---------- Panel işlemleri ----------
 function focusPane(pane) {
   const tab = pane.tab;
@@ -682,6 +779,7 @@ function focusPane(pane) {
   pane.term.focus();
   updateTabTitle(tab);
   for (const p of leaves(tab.root)) p.hintSoon();
+  markSeen();
 }
 
 // before: yeni panel sola/yukarıya açılır (yoksa sağa/aşağıya)
@@ -782,7 +880,7 @@ function renderHidden() {
   if (!hiddenPanes.length) { closePopovers(); return; }
   for (const p of hiddenPanes) {
     const row = document.createElement('div');
-    row.className = 'hidden-item';
+    row.className = 'hidden-item' + (p.attention ? ' attention' : '');
     const time = p.hiddenAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     row.innerHTML = `
       <div class="hidden-info">
@@ -803,6 +901,7 @@ function renderHidden() {
     row.querySelector('[data-act="close"]').onclick = () => closePane(p);
     list.appendChild(row);
   }
+  btn.classList.toggle('attention', hiddenPanes.some((p) => p.attention));
 }
 
 function moveFocus(dx, dy) {
@@ -1065,7 +1164,20 @@ const ui = {
   cursorBlink: KUI.toggle($('setCursorBlink'), (on) => changeSetting('cursorBlink', on)),
   copyOnSelect: KUI.toggle($('setCopyOnSelect'), (on) => changeSetting('copyOnSelect', on)),
   rightClick: KUI.toggle($('setRightClick'), (on) => changeSetting('rightClick', on)),
+  notify: KUI.toggle($('setNotify'), (on) => changeSetting('notify', on)),
+  notifyToast: KUI.toggle($('setNotifyToast'), (on) => changeSetting('notifyToast', on)),
+  notifyFlash: KUI.toggle($('setNotifyFlash'), (on) => changeSetting('notifyFlash', on)),
+  notifyBell: KUI.toggle($('setNotifyBell'), (on) => changeSetting('notifyBell', on)),
 };
+
+// Deneme: pencere önde olsa bile bildirimi gösterir
+$('testNotify').onclick = () => api.notify({
+  id: activeTab?.activePane?.id,
+  title: 'Kabuk',
+  body: 'Bildirimler çalışıyor. Claude Code işini bitirince böyle haber vereceğim.',
+  toast: settings.notifyToast,
+  flash: false,
+});
 
 for (const b of $('setMode').querySelectorAll('[data-v]')) {
   b.onclick = () => { settings.mode = b.dataset.v; saveSettings(); applyTheme(); };
@@ -1112,6 +1224,11 @@ function renderSettings() {
   ui.scrollback.setValue(settings.scrollback);
   ui.copyOnSelect.setChecked(settings.copyOnSelect);
   ui.rightClick.setChecked(settings.rightClick);
+  ui.notify.setChecked(settings.notify);
+  ui.notifyToast.setChecked(settings.notifyToast);
+  ui.notifyFlash.setChecked(settings.notifyFlash);
+  ui.notifyBell.setChecked(settings.notifyBell);
+  for (const r of settingsPage.querySelectorAll('.notify-sub')) r.hidden = !settings.notify;
   renderKeys();
   requestAnimationFrame(markNav);
 

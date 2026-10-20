@@ -48,6 +48,18 @@ WebGL alanına izin verdiği için yalnızca seçili sekmenin panelleri WebGL ku
 diğer sekmeler ve gizli paneller normal çizimde bekler. `allowTransparency` yalnızca buzlu camda açık, çünkü
 açıkken WebGL yazıları ince ve soluk çiziyor.
 
+## Bildirimler ve bağlantılar
+
+Programlar dikkat isteyince (`attend()` renderer.js): zil (BEL), OSC 9 (iTerm2/Codex; `9;4` ilerleme ve `9;9`
+gibi ConEmu kodları sayılmaz), OSC 777;notify;başlık;mesaj (Ghostty biçimi). Seçili panele bakılıyorsa hiçbir şey
+olmaz; aynı sekmede başka panelse çerçeve yanıp söner; değilse sekmede nokta + Windows bildirimi + görev çubuğu
+(main.js `notify`). Claude Code tanımadığı terminale bildirim göndermez: kullanıcı Claude Code'da
+`/config > Notifications > Ghostty` seçmeli. Windows bildirimi için main.js açılışta Başlat menüsüne
+`Kabuk.lnk` (AppUserModelID `Kabuk`) yazar. Testte gerçek bildirim çıkmasın: `Notification.prototype.show`'u değiştir.
+
+Terminal bağlantıları: OSC 8 bağlantıları `linkHandler` → `confirmLink` (KUI onay kutusu, adres görünür) →
+kullanıcının tarayıcısı. Pencere içinde başka sayfa açılamaz (`setWindowOpenHandler` deny, `will-navigate` engelli).
+
 ## Kısayollar
 
 Bütün kısayollar `renderer/keys.js` içindeki `ACTIONS` listesinde (ad, grup, varsayılan tuşlar). Her işlemin

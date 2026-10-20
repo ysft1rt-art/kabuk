@@ -783,7 +783,7 @@ img, svg, a, button { -webkit-user-drag: none; }
 }
 @keyframes kpop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
 .kmodal-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
-.kmodal-text { color: var(--dim); line-height: 1.5; }
+.kmodal-text { color: var(--dim); line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
 .kmodal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
 /* İpucu kutusu (title="" yerine data-tip="") */
@@ -889,3 +889,21 @@ img, svg, a, button { -webkit-user-drag: none; }
 @keyframes kbd-pulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); } }
 .kbd-chip.saved { animation: kbd-saved .9s ease-out; }
 @keyframes kbd-saved { from { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); } }
+
+/* Bildirim işaretleri: sekmede nokta, bölünmüş panelde yanıp sönen çerçeve, gizli listesinde nokta */
+.tab.attention .tab-title::before,
+.hidden-chip.attention > span:first-of-type::before,
+.hidden-item.attention .hidden-title::before {
+  content: "";
+  display: inline-block;
+  width: 7px; height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 1px;
+  animation: attn-dot 1.6s ease-in-out infinite;
+}
+@keyframes attn-dot { 50% { opacity: .35; } }
+.multi .pane.attention::after { animation: attn-pane 1.6s ease-in-out infinite; }
+@keyframes attn-pane { 50% { box-shadow: inset 0 0 0 2px var(--accent); } }
+.set-pre { white-space: pre; }

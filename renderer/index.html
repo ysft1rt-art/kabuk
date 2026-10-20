@@ -79,6 +79,9 @@
       <button data-sec="secTerm">
         <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5 7l2 1.5L5 10M8.5 10.5H11"/></svg>Terminal
       </button>
+      <button data-sec="secNotify">
+        <svg viewBox="0 0 16 16"><path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1 1.5H3zM6.5 13.5a1.5 1.5 0 0 0 3 0"/></svg>Bildirimler
+      </button>
       <button data-sec="secKeys">
         <svg viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5"/><path d="M4 6.8h.01M6.5 6.8h.01M9 6.8h.01M11.5 6.8h.01M5 9.7h6"/></svg>Kısayollar
       </button>
@@ -274,6 +277,69 @@
                   <div class="set-desc">Seçim varsa kopyalar, yoksa yapıştırır.</div>
                 </div>
                 <button id="setRightClick" class="kswitch"></button>
+              </div>
+            </div>
+          </section>
+
+          <section id="secNotify">
+            <h2>Bildirimler</h2>
+            <div class="set-card">
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Bildirimler</div>
+                  <div class="set-desc">Bir program dikkatini istediğinde haber ver: Claude Code işini bitirince veya onay beklerken.
+                    O terminale zaten bakıyorsan bildirim çıkmaz; başka sekmedeysen sekmede bir nokta belirir.</div>
+                </div>
+                <button id="setNotify" class="kswitch"></button>
+              </div>
+              <div class="set-row notify-sub">
+                <div class="set-label">
+                  <div class="set-name">Windows bildirimi</div>
+                  <div class="set-desc">Kabuk arkadayken ekranın köşesinde bildirim çıkar. Tıklayınca o terminale gider.</div>
+                </div>
+                <button id="setNotifyToast" class="kswitch"></button>
+              </div>
+              <div class="set-row notify-sub">
+                <div class="set-label">
+                  <div class="set-name">Görev çubuğunda yanıp sön</div>
+                  <div class="set-desc">Kabuk'un görev çubuğundaki simgesi, pencereye dönene kadar turuncu yanar.</div>
+                </div>
+                <button id="setNotifyFlash" class="kswitch"></button>
+              </div>
+              <div class="set-row notify-sub">
+                <div class="set-label">
+                  <div class="set-name">Zil sinyalini de say</div>
+                  <div class="set-desc">Bazı programlar yazı yerine sadece zil sinyali gönderir. Çok sık bildirim gelirse kapat.</div>
+                </div>
+                <button id="setNotifyBell" class="kswitch"></button>
+              </div>
+              <div class="set-row notify-sub">
+                <div class="set-label">
+                  <div class="set-name">Dene</div>
+                  <div class="set-desc">Bir deneme bildirimi gönderir. Windows bildirimi çıkmıyorsa Windows Ayarları &gt; Sistem &gt; Bildirimler'de Kabuk'un açık olduğuna bak.</div>
+                </div>
+                <button id="testNotify" class="set-btn">Deneme bildirimi</button>
+              </div>
+            </div>
+
+            <div class="keys-group">Programların bildirim göndermesi için</div>
+            <div class="set-card">
+              <div class="set-row wrap">
+                <div class="set-label">
+                  <div class="set-name">Claude Code</div>
+                  <div class="set-desc">Claude Code Kabuk'u tanımadığı için kendiliğinden bildirim göndermez. Bir kez ayarlaman yeterli:
+                    Claude Code'da <b>/config</b> yaz, <b>Notifications</b> satırını <b>Ghostty</b> yap.</div>
+                </div>
+                <div class="set-sub"><div class="set-path">/config  →  Notifications  →  Ghostty</div></div>
+              </div>
+              <div class="set-row wrap">
+                <div class="set-label">
+                  <div class="set-name">Codex</div>
+                  <div class="set-desc">Kullanıcı klasöründeki <b>.codex\config.toml</b> dosyasına şunu ekle:</div>
+                </div>
+                <div class="set-sub"><div class="set-path set-pre">[tui]
+notifications = true
+notification_method = "osc9"</div></div>
               </div>
             </div>
           </section>

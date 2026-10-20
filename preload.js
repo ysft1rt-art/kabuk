@@ -18,4 +18,6 @@ contextBridge.exposeInMainWorld('kabuk', {
   getPaths: () => ipcRenderer.invoke('paths:get'),
   pickFolder: (current) => ipcRenderer.invoke('dialog:folder', current),
   pickProgram: () => ipcRenderer.invoke('dialog:program'),
+  notify: (opts) => ipcRenderer.send('notify', opts),
+  onNotifyClick: (cb) => ipcRenderer.on('notify:click', (_e, id) => cb(id)),
 });

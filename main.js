@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, clipboard, shell, nativeTheme, dialog, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, shell, nativeTheme, dialog, screen, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -52,6 +52,37 @@ function onScreen(b) {
 // Otomatik testlerde pencere hiç görünmeden, ekran dışında çizilir
 const HEADLESS = process.env.KABUK_HEADLESS === '1';
 
+// ---------- Windows kimliği ve kısayollar ----------
+// Windows bildirimleri yalnızca Başlat menüsünde aynı kimlikle (AppUserModelID) bir kısayolu olan
+// uygulamalardan gösterilir. Kabuk kurulum programıyla değil electron.exe ile çalıştığı için
+// bu kısayolu kendisi oluşturur; masaüstündeki Kabuk kısayoluna da aynı kimliği yazar
+// (görev çubuğuna sabitlenince açık pencereyle aynı simgede birleşsin)
+const AUMID = 'Kabuk';
+app.setAppUserModelId(AUMID);
+
+function ensureShortcuts() {
+  if (HEADLESS || process.platform !== 'win32' || app.isPackaged) return;
+  const link = {
+    target: process.execPath,
+    args: `"${app.getAppPath()}"`,
+    cwd: app.getAppPath(),
+    icon: path.join(__dirname, 'icon.ico'),
+    iconIndex: 0,
+    description: 'Kabuk terminali',
+    appUserModelId: AUMID,
+  };
+  const startMenu = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Kabuk.lnk');
+  try { shell.writeShortcutLink(startMenu, fs.existsSync(startMenu) ? 'replace' : 'create', link); } catch {}
+  // Masaüstü kısayolu yalnızca bu Kabuk'u açıyorsa güncellenir; başka bir şeyi gösteriyorsa dokunulmaz
+  const desktop = path.join(app.getPath('desktop'), 'Kabuk.lnk');
+  try {
+    const cur = shell.readShortcutLink(desktop);
+    if (path.resolve(cur.target) === path.resolve(process.execPath) && cur.appUserModelId !== AUMID) {
+      shell.writeShortcutLink(desktop, 'update', { appUserModelId: AUMID });
+    }
+  } catch {}
+}
+
 function createWindow() {
   const state = readState();
   const startMode = state.startMode || 'normal';
@@ -76,6 +107,11 @@ function createWindow() {
     },
   });
   win.setMenu(null);
+  // Kabuk'un içinde hiçbir zaman başka bir sayfa açılmaz: terminaldeki bağlantılar
+  // yalnızca renderer'ın onayıyla ve kullanıcının kendi tarayıcısında açılır (link:open)
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (e) => e.preventDefault());
+  win.on('focus', () => win.flashFrame(false));
   if (!HEADLESS && (startMode === 'maximized' || (startMode === 'remember' && state.maximized))) win.maximize();
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.on('close', (e) => {
@@ -177,7 +213,35 @@ ipcMain.handle('clipboard:read', () => clipboard.readText());
 ipcMain.on('clipboard:write', (_e, text) => clipboard.writeText(String(text)));
 
 ipcMain.on('link:open', (_e, url) => {
-  if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+  if (typeof url === 'string' && /^https?:\/\//i.test(url)) shell.openExternal(url);
+});
+
+// ---------- Bildirimler ----------
+// Renderer, bir program dikkat istediğinde (Claude Code bitti / onay bekliyor) buraya yazar.
+// Gösterilen bildirimler kapanana kadar burada tutulur, yoksa çöpe gidip tıklama çalışmaz
+const shownNotes = new Set();
+ipcMain.on('notify', (_e, { id, title, body, toast, flash }) => {
+  if (!win) return;
+  if (flash && !win.isFocused()) win.flashFrame(true);
+  if (!toast || !Notification.isSupported()) return;
+  const note = new Notification({
+    title: String(title || 'Kabuk').slice(0, 120),
+    body: String(body || '').slice(0, 400),
+    icon: path.join(__dirname, 'icon.png'),
+  });
+  shownNotes.add(note);
+  const forget = () => shownNotes.delete(note);
+  note.on('click', () => {
+    forget();
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+    win.webContents.send('notify:click', id);
+  });
+  note.on('close', forget);
+  note.on('failed', forget);
+  note.show();
 });
 
 ipcMain.on('window:chrome', (_e, { symbolColor, acrylic, scheme }) => {
@@ -193,5 +257,5 @@ ipcMain.on('window:close', (_e, force) => {
   win?.close();
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => { ensureShortcuts(); createWindow(); });
 app.on('window-all-closed', () => app.quit());
