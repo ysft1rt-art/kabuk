@@ -92,4 +92,4 @@ Yeni açılan panelde, henüz bir şey yazılmamışken boş komut satırında s
 varsayılan açık; `fun.js` `TIPS` listesi kabuk türüne göre: powershell / cmd / bash, `shellKind` renderer.js).
 Yazmaya başlayınca gizlenir; ilk gerçek komut kabuğa gidince o panelde bir daha çıkmaz (`everTyped`).
 Eğlence kelimeleri, yazıp silmek ve boş Enter önerileri kapatmaz. Eğlence modu da açıksa eğlence ipucu önerilerin bir
-alt satırında sabit durur; öneriler bitince eskisi gibi komut satırının yanına geçer (`updateHint`).
+alt satırında sabit durur ve ilk gerçek komuttan sonra o da gizlenir; eğlence kelimeleri yine çalışır (`updateHint`).

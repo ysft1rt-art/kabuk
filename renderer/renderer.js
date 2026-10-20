@@ -474,14 +474,15 @@ class Pane {
     this._hintTimer = setTimeout(() => this.updateHint(), 150);
   }
 
-  // Boş komut satırında soluk yazılar: henüz hiçbir şey yazılmamış terminalde akan komut önerileri,
+  // Boş komut satırında soluk yazılar (yalnızca ilk gerçek komuta kadar): akan komut önerileri ve
   // eğlence modu açıksa eğlence ipucu (öneriler varken onların hemen altında sabit durur)
   updateHint() {
     const b = this.term.buffer.active;
     const atPrompt = this.tab?.activePane === this && this.typed === '' && !this.held &&
       b.viewportY === b.baseY && this.atEmptyPrompt();
+    // İlk gerçek komuttan sonra ikisi de gizlenir (eğlence kelimeleri yine çalışır)
     const tips = atPrompt && settings.tips && !this.everTyped;
-    const fun = atPrompt && settings.fun;
+    const fun = atPrompt && settings.fun && !this.everTyped;
     const screen = this.host.querySelector('.xterm-screen');
     if (!(tips || fun) || !screen) { this.fx.hideHint(); return; }
     const cw = screen.clientWidth / this.term.cols;
