@@ -286,7 +286,8 @@ class Pane {
     this.typed = '';
     this.typedOk = true;   // false: ok tuşu vb. yüzünden satırı artık doğru takip edemiyoruz
     this.held = null;      // Enter tutulurken gelen tuşlar
-    this.everTyped = false; // ilk harf yazılınca komut önerileri bu panelde bir daha çıkmaz
+    this.everTyped = false; // ilk gerçek komut çalışınca komut önerileri bu panelde bir daha çıkmaz
+                            // (eğlence kelimeleri ve yazıp silmek sayılmaz)
 
     this.term.attachCustomKeyEventHandler((e) => this.handleKey(e));
     this.term.onData((d) => this.onInput(d));
@@ -391,7 +392,11 @@ class Pane {
       this.typed = '';
       this.typedOk = true;
       const scene = settings.fun && ok ? funScene(typed) : null;
-      if (!scene) return false;
+      if (!scene) {
+        // Kabuğa bir komut gidiyor (Tab ile tamamlanan satır da olabilir, o yüzden ekrana da bakılır)
+        if (typed.trim() || !this.atEmptyPrompt()) this.everTyped = true;
+        return false;
+      }
       this.tryFun(typed, scene);
       return true;
     }
@@ -402,7 +407,6 @@ class Pane {
     if (d.startsWith('\x1b')) { if (this.typed) this.typedOk = false; return false; }
     if (/[\r\n]/.test(d)) { this.typedOk = false; this.typed += ' '; this.everTyped = true; return false; }
     this.typed += d;
-    this.everTyped = true;
     return false;
   }
 
@@ -423,6 +427,7 @@ class Pane {
         this.fx.play(scene);
       } else {
         api.write(this.ptyId, '\r');
+        this.everTyped = true;
       }
       for (const d of held) this.onInput(d);
       this.hintSoon();

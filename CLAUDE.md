@@ -90,5 +90,6 @@ büyük/küçük harf ve Türkçe harf farkı gözetmeden eşleşir (`funScene`)
 
 Yeni açılan panelde, henüz bir şey yazılmamışken boş komut satırında soluk örnek komutlar akar (`settings.tips`,
 varsayılan açık; `fun.js` `TIPS` listesi kabuk türüne göre: powershell / cmd / bash, `shellKind` renderer.js).
-İlk harf yazılınca o panelde bir daha çıkmaz (`everTyped`). Eğlence modu da açıksa eğlence ipucu önerilerin bir
+Yazmaya başlayınca gizlenir; ilk gerçek komut kabuğa gidince o panelde bir daha çıkmaz (`everTyped`).
+Eğlence kelimeleri, yazıp silmek ve boş Enter önerileri kapatmaz. Eğlence modu da açıksa eğlence ipucu önerilerin bir
 alt satırında sabit durur; öneriler bitince eskisi gibi komut satırının yanına geçer (`updateHint`).
