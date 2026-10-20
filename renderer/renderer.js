@@ -6,13 +6,13 @@ const THEMES = window.KABUK_THEMES;
 
 // ---------- Ayarlar (bu bilgisayarda saklanır) ----------
 const DEFAULTS = {
-  v: 5,
+  v: 6,
   theme: 'kar',
-  mode: 'light',       // auto (Windows'a uy) / dark / light — bütün temalarda geçerli
-  acrylic: false,
+  mode: 'auto',        // auto (Windows'a uy) / dark / light — bütün temalarda geçerli
+  acrylic: true,       // buzlu cam
   glass: 0.8,          // buzlu camın renk yoğunluğu (0.5 = çok saydam, 0.95 = neredeyse düz)
   pureBlack: true,
-  fun: false,          // boş satırda ipucu + animasyonlar (varsayılan kapalı)
+  fun: true,           // boş satırda ipucu + animasyonlar
   tips: true,          // yeni terminalde boş satırda akan komut önerileri
   fontSize: 13,
   fontFamily: 'JetBrains Mono Variable',
@@ -48,6 +48,8 @@ try {
   if ((saved.v || 1) < 4) { delete saved.theme; delete saved.mode; }
   // v5: Eğlence modu artık varsayılan olarak kapalı
   if ((saved.v || 1) < 5) delete saved.fun;
+  // v6: Yeni varsayılanlar: tema modu Otomatik, buzlu cam açık (%80), eğlence modu ve öneriler açık
+  if ((saved.v || 1) < 6) for (const k of ['mode', 'acrylic', 'glass', 'fun', 'tips']) delete saved[k];
   saved.v = DEFAULTS.v;
   Object.assign(settings, saved);
 } catch {}

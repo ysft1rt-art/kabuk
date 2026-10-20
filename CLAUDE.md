@@ -81,7 +81,8 @@ Tıklamaları **gerçek fare olaylarıyla** test et: `webContents.sendInputEvent
 
 ## Eğlence modu
 
-Varsayılan kapalı (`settings.fun`). Açıkken boş komut satırına `kedi`, `köpek` vb. yazıp Enter'a basınca animasyon
+Varsayılan açık (`settings.fun`). Diğer varsayılanlar: tema modu Otomatik, buzlu cam açık, yoğunluk %80
+(`DEFAULTS` renderer.js; varsayılan değişince `v` artırılıp eski kayıttan o anahtarlar silinir). Açıkken boş komut satırına `kedi`, `köpek` vb. yazıp Enter'a basınca animasyon
 oynar (`renderer/fun.js`). Karar Enter anında ekrana bakılarak verilir (`tryFun`): satır "komut istemi + kelime"
 değilse Enter kabuğa normal gider. Alt satıra taşan uzun istemler birleştirilir (`lineBeforeCursor`). Kelimeler
 büyük/küçük harf ve Türkçe harf farkı gözetmeden eşleşir (`funScene`).
