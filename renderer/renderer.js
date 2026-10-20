@@ -168,7 +168,8 @@ function applyTheme() {
   root.setProperty('--accent', ui.accent);
   root.setProperty('--border', ui.border);
   document.body.classList.toggle('light', !!th.light);
-  forEachPane((p) => { p.term.options.theme = termTheme(); });
+  // Saydamlık yalnızca buzlu camda: kapalıyken harfler zemin rengine göre çizilir, daha keskin ve koyu görünür
+  forEachPane((p) => { p.term.options.allowTransparency = a; p.term.options.theme = termTheme(); });
   // Windows'un camı ve pencere düğmeleri de temanın moduna uysun
   api.setChrome({ symbolColor: ui.fg, acrylic: a, scheme: settings.mode === 'auto' ? 'system' : settings.mode });
   renderAppearance();
@@ -251,7 +252,7 @@ class Pane {
       cursorBlink: settings.cursorBlink,
       cursorStyle: settings.cursorStyle,
       cursorInactiveStyle: 'outline',
-      allowTransparency: true,
+      allowTransparency: settings.acrylic,
       allowProposedApi: true,
       scrollback: settings.scrollback,
       theme: termTheme(),
@@ -308,6 +309,26 @@ class Pane {
 
     this._fitQueued = false;
     new ResizeObserver(() => this.fitSoon()).observe(this.el);
+  }
+
+  // Ekran kartıyla (WebGL) çizim. Blok karakterleri (█ ▐ ▛ ▜) yazı tipinden değil kendisi çizer;
+  // böylece Claude Code'un maskotu ve çerçeveler satır aralığı ne olursa olsun boşluksuz görünür.
+  // Açıp kapatmayı syncRenderers yapar. Bağlam kaybolursa (sürücü sorunu) bu panel normal çizimde kalır
+  setWebgl(on) {
+    if (on && !this.gl && !this.glFailed) {
+      try {
+        const gl = new WebglAddon.WebglAddon();
+        gl.onContextLoss(() => { this.glFailed = true; this.setWebgl(false); });
+        this.term.loadAddon(gl);
+        this.gl = gl;
+      } catch {
+        this.glFailed = true;
+      }
+    } else if (!on && this.gl) {
+      const gl = this.gl;
+      this.gl = null;
+      try { gl.dispose(); } catch {}
+    }
   }
 
   async start(shellId, cwd = startCwd()) {
@@ -487,6 +508,15 @@ class Split {
 }
 
 // ---------- Ağaç yardımcıları ----------
+// Chromium aynı anda en fazla 16 WebGL alanına izin verir (fazlası eskileri bozar).
+// Bu yüzden yalnızca ekranda görünen paneller (seçili sekme) WebGL ile çizilir; diğerleri normal çizimde bekler
+const MAX_WEBGL = 12;
+function syncRenderers() {
+  const visible = activeTab ? leaves(activeTab.root).slice(0, MAX_WEBGL) : [];
+  forEachPane((p) => { if (!visible.includes(p)) p.setWebgl(false); });
+  visible.forEach((p) => p.setWebgl(true));
+}
+
 function leaves(node) {
   if (!node) return [];
   return node instanceof Pane ? [node] : [...leaves(node.a), ...leaves(node.b)];
@@ -554,6 +584,7 @@ function activateTab(tab) {
     t.el.classList.toggle('active', on);
     t.tabEl.classList.toggle('active', on);
   }
+  syncRenderers();
   leaves(tab.root).forEach((p) => p.fitSoon());
   (tab.activePane || leaves(tab.root)[0])?.term.focus();
 }
@@ -647,6 +678,7 @@ function focusPane(pane) {
   const tab = pane.tab;
   tab.activePane = pane;
   for (const p of leaves(tab.root)) p.el.classList.toggle('focused', p === pane);
+  syncRenderers();
   pane.term.focus();
   updateTabTitle(tab);
   for (const p of leaves(tab.root)) p.hintSoon();

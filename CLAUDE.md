@@ -36,6 +36,14 @@ Değişiklik sonrası kontrol: `grep -n 'title=\|<select\|type="range"\|type="ch
 Yeni bilinen tema eklemek için alttaki `add(key, ad, [koyu], [açık])` yeterli; sekme/çubuk/kenar renkleri
 ve açık temada koyu tutulan "beyaz" otomatik türetilir. Temalar Ayarlar > Görünüm'deki açılır listeden seçilir.
 
+## Çizim (WebGL)
+
+Terminaller `@xterm/addon-webgl` ile çizilir; blok karakterleri (█ ▐ ▛ ▜, Claude Code maskotu) hücreyi boşluksuz
+doldurur. Varsayılan DOM çizimi bunları yazı tipinden çizip aralarında boşluk bırakıyordu. Chromium en fazla 16
+WebGL alanına izin verdiği için yalnızca seçili sekmenin panelleri WebGL kullanır (`syncRenderers`, en fazla 12);
+diğer sekmeler ve gizli paneller normal çizimde bekler. `allowTransparency` yalnızca buzlu camda açık, çünkü
+açıkken WebGL yazıları ince ve soluk çiziyor.
+
 ## Kısayollar
 
 Bütün kısayollar `renderer/keys.js` içindeki `ACTIONS` listesinde (ad, grup, varsayılan tuşlar). Her işlemin
