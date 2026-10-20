@@ -78,3 +78,10 @@ Uygulamayı kullanıcının ayarlarına dokunmadan test etmek için: `KABUK_HEAD
 Tıklamaları **gerçek fare olaylarıyla** test et: `webContents.sendInputEvent({ type: 'mouseDown' / 'mouseUp' / 'mouseMove', x, y })`.
 `element.click()` mousedown'ı atlar; bu yüzden "mousedown'da menüyü kapatan" türden hatalar ancak gerçek olaylarla yakalanır
 (açılır listedeki temalara tıklanamama hatası böyle gözden kaçtı).
+
+## Eğlence modu
+
+Varsayılan kapalı (`settings.fun`). Açıkken boş komut satırına `kedi`, `köpek` vb. yazıp Enter'a basınca animasyon
+oynar (`renderer/fun.js`). Karar Enter anında ekrana bakılarak verilir (`tryFun`): satır "komut istemi + kelime"
+değilse Enter kabuğa normal gider. Alt satıra taşan uzun istemler birleştirilir (`lineBeforeCursor`). Kelimeler
+büyük/küçük harf ve Türkçe harf farkı gözetmeden eşleşir (`funScene`).

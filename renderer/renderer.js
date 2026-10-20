@@ -2,17 +2,17 @@
 
 const api = window.kabuk;
 const THEMES = window.KABUK_THEMES;
-// FunLayer, FUN_WORDS, PROMPT_RE: fun.js'ten gelir
+// FunLayer, funScene, PROMPT_RE: fun.js'ten gelir
 
 // ---------- Ayarlar (bu bilgisayarda saklanır) ----------
 const DEFAULTS = {
-  v: 4,
+  v: 5,
   theme: 'kar',
   mode: 'light',       // auto (Windows'a uy) / dark / light — bütün temalarda geçerli
   acrylic: false,
   glass: 0.8,          // buzlu camın renk yoğunluğu (0.5 = çok saydam, 0.95 = neredeyse düz)
   pureBlack: true,
-  fun: true,           // boş satırda ipucu + animasyonlar
+  fun: false,          // boş satırda ipucu + animasyonlar (varsayılan kapalı)
   fontSize: 13,
   fontFamily: 'JetBrains Mono Variable',
   fontWeight: 300,
@@ -45,6 +45,8 @@ try {
   if ((saved.v || 1) < 2) delete saved.fontSize;
   // v4: Klasik tema kaldırıldı; varsayılan Kar (açık)
   if ((saved.v || 1) < 4) { delete saved.theme; delete saved.mode; }
+  // v5: Eğlence modu artık varsayılan olarak kapalı
+  if ((saved.v || 1) < 5) delete saved.fun;
   saved.v = DEFAULTS.v;
   Object.assign(settings, saved);
 } catch {}
@@ -280,7 +282,8 @@ class Pane {
     // Eğlence katmanı + yazılan satırın takibi
     this.fx = new FunLayer(host);
     this.typed = '';
-    this.typedAtPrompt = false;
+    this.typedOk = true;   // false: ok tuşu vb. yüzünden satırı artık doğru takip edemiyoruz
+    this.held = null;      // Enter tutulurken gelen tuşlar
 
     this.term.attachCustomKeyEventHandler((e) => this.handleKey(e));
     this.term.onData((d) => this.onInput(d));
@@ -370,42 +373,91 @@ class Pane {
 
   onInput(d) {
     if (!this.ptyId) return;
+    // Eğlence kelimesi kontrol edilirken basılan tuşlar sırası bozulmasın diye bekletilir
+    if (this.held) { this.held.push(d); return; }
     this.fx.hideHint();
     if (!this.trackInput(d)) api.write(this.ptyId, d);
     this.hintSoon();
   }
 
-  // Yazılan satırı takip eder; boş komut satırına eğlence kelimesi yazılıp
-  // Enter'a basıldıysa satırı siler, animasyonu oynatır ve true döner
+  // Yazılan satırı takip eder. Enter'a basıldığında satır bir eğlence kelimesiyse
+  // Enter'ı tutar (true döner) ve tryFun'a bırakır
   trackInput(d) {
     if (d === '\r') {
-      const word = this.typed.trim().toLocaleLowerCase('tr');
-      const scene = settings.fun && this.typedAtPrompt ? FUN_WORDS[word] : null;
-      const n = [...this.typed].length;
+      const typed = this.typed, ok = this.typedOk;
       this.typed = '';
-      this.typedAtPrompt = false;
+      this.typedOk = true;
+      const scene = settings.fun && ok ? funScene(typed) : null;
       if (!scene) return false;
-      api.write(this.ptyId, '\x7f'.repeat(n));
-      this.fx.play(scene);
+      this.tryFun(typed, scene);
       return true;
     }
     if (d === '\x7f' || d === '\b') { this.typed = [...this.typed].slice(0, -1).join(''); return false; }
-    if (d === '\x1b' || (d.length === 1 && d < ' ')) { this.typed = ''; this.typedAtPrompt = false; return false; }
+    if (d === '\x1b' || (d.length === 1 && d < ' ')) { this.typed = ''; this.typedOk = true; return false; }
     // Kaçış dizileri: ok tuşları veya terminalin Windows'a verdiği otomatik cevaplar.
     // Satır boşken yok say; doluyken satırı artık güvenle takip edemeyiz
-    if (d.startsWith('\x1b')) { if (this.typed) this.typedAtPrompt = false; return false; }
-    if (/[\r\n]/.test(d)) { this.typedAtPrompt = false; this.typed += ' '; return false; }
-    if (this.typed === '') this.typedAtPrompt = this.atEmptyPrompt();
+    if (d.startsWith('\x1b')) { if (this.typed) this.typedOk = false; return false; }
+    if (/[\r\n]/.test(d)) { this.typedOk = false; this.typed += ' '; return false; }
     this.typed += d;
     return false;
+  }
+
+  // Karar Enter anında ekrana bakılarak verilir: satır "komut istemi + yazılan kelime" ise animasyon oynar,
+  // değilse Enter kabuğa normal gider. Hızlı yazınca kabuk son harfleri ekrana henüz basmamış olabilir;
+  // o yüzden en fazla 400 ms bekler (bekleme yalnızca bir eğlence kelimesi yazıldığında olur)
+  tryFun(typed, scene) {
+    this.held = [];
+    const start = performance.now();
+    const check = () => {
+      const state = this.funLineState(typed);
+      if (state === 'wait' && performance.now() - start < 400) { setTimeout(check, 25); return; }
+      const held = this.held;
+      this.held = null;
+      if (!this.ptyId) return;
+      if (state === 'yes') {
+        api.write(this.ptyId, '\x7f'.repeat([...typed].length));
+        this.fx.play(scene);
+      } else {
+        api.write(this.ptyId, '\r');
+      }
+      for (const d of held) this.onInput(d);
+      this.hintSoon();
+    };
+    check();
+  }
+
+  funLineState(typed) {
+    const b = this.term.buffer.active;
+    if (b.type !== 'normal') return 'no';
+    const before = this.lineBeforeCursor();
+    if (!before.endsWith(typed)) return 'wait';
+    return PROMPT_RE.test(before.slice(0, before.length - typed.length).trimEnd()) ? 'yes' : 'no';
+  }
+
+  // İmlecin bulunduğu satırın imlece kadar olan kısmı. Uzun klasör yolu yüzünden alt satıra taşan
+  // komut istemi tek satır olarak birleştirilir (dar panelde istem çoğu zaman taşar)
+  lineBeforeCursor() {
+    const b = this.term.buffer.active;
+    let y = b.baseY + b.cursorY;
+    let line = b.getLine(y);
+    if (!line) return '';
+    let text = line.translateToString(false, 0, b.cursorX);
+    while (line.isWrapped && y > 0) {
+      line = b.getLine(--y);
+      if (!line) break;
+      text = line.translateToString(false) + text;
+    }
+    return text;
   }
 
   atEmptyPrompt() {
     const b = this.term.buffer.active;
     if (b.type !== 'normal') return false;
+    // İmleçten sonra yazı olmamalı
+    const rest = b.getLine(b.baseY + b.cursorY)?.translateToString(true, b.cursorX) ?? '';
+    if (rest.trim()) return false;
     // PowerShell istemin sonuna gerçek bir boşluk yazar; kırpıp bakıyoruz
-    const line = (b.getLine(b.baseY + b.cursorY)?.translateToString(true) ?? '').trimEnd();
-    return b.cursorX >= line.length && PROMPT_RE.test(line);
+    return PROMPT_RE.test(this.lineBeforeCursor().trimEnd());
   }
 
   hintSoon() {

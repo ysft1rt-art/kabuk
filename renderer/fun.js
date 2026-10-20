@@ -1,11 +1,18 @@
 'use strict';
 // Eğlence katmanı: terminalin üstünde çizilen animasyonlu emojiler ve boş satır ipucu
 
+// Kelimeler Türkçe harfsiz ve küçük harfle yazılır; funScene yazılanı aynı hale getirip bakar
 const FUN_WORDS = {
-  kedi: 'kedi', köpek: 'kopek', kopek: 'kopek', kuş: 'kus', kus: 'kus',
-  balık: 'balik', balik: 'balik', kar: 'kar', fişek: 'fisek', fisek: 'fisek',
-  'havai fişek': 'fisek', kalp: 'kalp',
+  kedi: 'kedi', kopek: 'kopek', kus: 'kus', balik: 'balik', kar: 'kar',
+  fisek: 'fisek', 'havai fisek': 'fisek', kalp: 'kalp',
 };
+const TR_PLAIN = { ı: 'i', ş: 's', ç: 'c', ğ: 'g', ö: 'o', ü: 'u' };
+
+// "Kedi", "KEDİ", "KEDI", " kedi " hepsi aynı kelime sayılır
+function funScene(text) {
+  const word = text.trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr').replace(/[ışçğöü]/g, (c) => TR_PLAIN[c]);
+  return Object.hasOwn(FUN_WORDS, word) ? FUN_WORDS[word] : null;
+}
 const FUN_HINT = '✨ eğlence için yaz: kedi · köpek · kuş · balık · kar · fişek · kalp';
 
 // Boş komut satırı: PowerShell (PS C:\...>), cmd (C:\...>), bash ($ / #)
@@ -222,4 +229,4 @@ const SCENES = {
   },
 };
 
-window.KabukFun = { FunLayer, FUN_WORDS, PROMPT_RE };
+window.KabukFun = { FunLayer, FUN_WORDS, PROMPT_RE, funScene };
