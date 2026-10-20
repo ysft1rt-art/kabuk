@@ -1120,12 +1120,24 @@ function closePopovers() {
   return any;
 }
 
+let popoverAnchor = null; // açık panel ve onu açan düğme: { panel, button, alignRight }
+
 function togglePopover(panel, button, alignRight) {
   const wasOpen = !panel.classList.contains('hidden');
   closePopovers();
   if (wasOpen) return;
   panel.classList.remove('hidden');
   button.classList.add('on');
+  popoverAnchor = { panel, button, alignRight };
+  placePopover();
+}
+
+// Paneli düğmesinin altına yerleştirir. Düğme yer değiştirince (sekme açılıp kapanınca, pencere
+// boyutu değişince) yeniden çağrılır; yoksa panel eski yerinde kalıp yeni sekmelerin altında kalıyordu
+function placePopover() {
+  if (!popoverAnchor) return;
+  const { panel, button, alignRight } = popoverAnchor;
+  if (panel.classList.contains('hidden')) { popoverAnchor = null; return; }
   const r = button.getBoundingClientRect();
   if (alignRight) {
     panel.style.left = '';
@@ -1135,11 +1147,14 @@ function togglePopover(panel, button, alignRight) {
     panel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - panel.offsetWidth - 8)) + 'px';
   }
 }
+new ResizeObserver(placePopover).observe($('tabs'));
+window.addEventListener('resize', placePopover);
 
 // Dışarı tıklanınca açılır panelleri kapat. Açılır listeler (ui.js) kendi dış tıklamasını
-// kendisi yönetir; onların içine tıklamak burada "dışarısı" sayılmamalı
+// kendisi yönetir; onların içine tıklamak burada "dışarısı" sayılmamalı. Paneli açan düğmeye
+// tıklamak da sayılmaz (onu kendi tıklaması kapatır); başka bir üst çubuk düğmesi ise paneli kapatır
 document.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.popover, .icon-btn, .hidden-chip, .kmenu, .kselect, .kmodal-back')) return;
+  if (e.target.closest('.popover, .icon-btn.on, .hidden-chip.on, .kmenu, .kselect, .kmodal-back')) return;
   closePopovers();
 });
 
