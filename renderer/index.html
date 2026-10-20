@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Kabuk</title>
+  <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
+  <link rel="stylesheet" href="../node_modules/@fontsource-variable/jetbrains-mono/index.css">
+  <link rel="stylesheet" href="../node_modules/@fontsource-variable/geist-mono/index.css">
+  <link rel="stylesheet" href="../node_modules/@fontsource-variable/fira-code/index.css">
+  <link rel="stylesheet" href="../node_modules/@fontsource-variable/source-code-pro/index.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Not: bu uygulamada Chromium'un hazır öğeleri (select, range, checkbox, title ipuçları,
+       confirm(), kaydırma çubukları) kullanılmaz. Onların yerine ui.js'teki bileşenler var. -->
+  <header id="titlebar">
+    <div id="tabs"></div>
+    <div class="newtab-group">
+      <button id="newTab" class="icon-btn" data-key-action="newTab" data-tip-text="Yeni sekme">
+        <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
+      </button>
+      <button id="shellMenuBtn" class="icon-btn small" data-tip="Kabuk seç">
+        <svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>
+      </button>
+    </div>
+    <button id="hiddenBtn" class="hidden-chip" data-tip="Gizli terminaller" hidden>
+      <svg viewBox="0 0 16 16"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"/><circle cx="8" cy="8" r="1.8"/><path d="M3 13L13 3"/></svg>
+      <span>Gizli</span><span id="hiddenCount" class="tab-badge">0</span>
+    </button>
+    <div class="spacer"></div>
+    <div class="tools">
+      <button id="splitRight" class="icon-btn" data-key-action="splitRight" data-tip-text="Sağa terminal aç">
+        <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M8 3v10"/></svg>
+      </button>
+      <button id="splitDown" class="icon-btn" data-key-action="splitDown" data-tip-text="Aşağıya terminal aç">
+        <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 8h12"/></svg>
+      </button>
+      <button id="settingsBtn" class="icon-btn" data-key-action="settings" data-tip-text="Ayarlar">
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/><circle cx="8" cy="8" r="4.3"/></svg>
+      </button>
+      <button id="helpBtn" class="icon-btn" data-tip="Kısayollar">
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M6.5 6.5a1.5 1.5 0 1 1 2 1.4c-.4.2-.5.5-.5.9V9.5M8 11.5v.01"/></svg>
+      </button>
+    </div>
+    <div class="caption-space"></div>
+  </header>
+
+  <main id="workspace"></main>
+
+  <div id="shellMenu" class="popover hidden"></div>
+
+  <div id="hiddenPanel" class="popover hidden">
+    <div class="popover-title">Gizli terminaller</div>
+    <div id="hiddenList"></div>
+  </div>
+
+  <div id="helpPanel" class="popover hidden">
+    <div class="popover-title">Kısayollar</div>
+    <div id="helpScroll" class="help-scroll">
+      <div id="helpKeys" class="help-cols"></div>
+    </div>
+    <button id="helpEditKeys" class="menu-item menu-sep">Kısayolları değiştir…</button>
+  </div>
+
+  <!-- Ayarlar sekmesinin içeriği: sekme açılınca oraya taşınır -->
+  <div id="settingsPage" class="settings" hidden>
+    <nav class="set-nav">
+      <div class="set-nav-title">Ayarlar</div>
+      <button data-sec="secStart">
+        <svg viewBox="0 0 16 16"><path d="M3 13V5.5L8 2l5 3.5V13H9.5V9.5h-3V13z"/></svg>Başlangıç
+      </button>
+      <button data-sec="secLook">
+        <svg viewBox="0 0 16 16"><path d="M8 2a6 6 0 1 0 0 12c1 0 1.3-.7 1-1.4-.4-.8.1-1.6 1-1.6H12a2 2 0 0 0 2-2A6 6 0 0 0 8 2z"/></svg>Görünüm
+      </button>
+      <button data-sec="secFont">
+        <svg viewBox="0 0 16 16"><path d="M3 13l4-10h2l4 10M4.6 9h6.8"/></svg>Yazı tipi
+      </button>
+      <button data-sec="secTerm">
+        <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M5 7l2 1.5L5 10M8.5 10.5H11"/></svg>Terminal
+      </button>
+      <button data-sec="secKeys">
+        <svg viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8.5" rx="1.5"/><path d="M4 6.8h.01M6.5 6.8h.01M9 6.8h.01M11.5 6.8h.01M5 9.7h6"/></svg>Kısayollar
+      </button>
+      <button data-sec="secShells">
+        <svg viewBox="0 0 16 16"><path d="M8 2l6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Kabuklar
+      </button>
+    </nav>
+
+    <div class="set-main">
+      <div id="settingsScroll" class="set-scroll">
+        <div class="settings-page">
+
+          <section id="secStart">
+            <h2>Başlangıç</h2>
+            <div class="set-card">
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Varsayılan kabuk</div>
+                  <div class="set-desc">Yeni sekmeler bununla açılır. Bölünen panel, böldüğün panelle aynı kabuğu kullanır.</div>
+                </div>
+                <div id="setShell"></div>
+              </div>
+              <div class="set-row wrap">
+                <div class="set-label">
+                  <div class="set-name">Başlangıç klasörü</div>
+                  <div class="set-desc">Yeni bir terminal açıldığında hangi klasörde başlasın.</div>
+                </div>
+                <div id="setStartDir" class="segmented">
+                  <button data-v="home">Kullanıcı</button>
+                  <button data-v="desktop">Masaüstü</button>
+                  <button data-v="custom">Özel klasör</button>
+                </div>
+                <div class="set-sub">
+                  <div id="startDirFixed" class="set-path"></div>
+                  <div id="startDirCustom" class="set-inline" hidden>
+                    <input id="setCustomDir" class="set-input" spellcheck="false" autocomplete="off" placeholder="Örn. C:\Projeler  veya  %USERPROFILE%\Belgeler">
+                    <button id="browseDir" class="set-btn">Gözat…</button>
+                  </div>
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Bölünen panel aynı klasörde açılsın</div>
+                  <div class="set-desc">Ekranı bölünce yeni panel, o an bulunduğun klasörden başlar (PowerShell, CMD, Git Bash).</div>
+                </div>
+                <button id="setSplitSameDir" class="kswitch"></button>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Açılışta pencere</div>
+                  <div class="set-desc">Kabuk açıldığında pencere ne boyutta olsun.</div>
+                </div>
+                <div id="setStartMode" class="segmented">
+                  <button data-v="normal">Normal</button>
+                  <button data-v="maximized">Ekranı kapla</button>
+                  <button data-v="remember">Son halini hatırla</button>
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Kapatırken sor</div>
+                  <div class="set-desc">Birden fazla terminal açıkken pencereyi kapatmadan önce onay ister.</div>
+                </div>
+                <button id="setConfirmClose" class="kswitch"></button>
+              </div>
+            </div>
+          </section>
+
+          <section id="secLook">
+            <h2>Görünüm</h2>
+            <div class="set-card">
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Tema</div>
+                  <div class="set-desc">Renkler terminale ve pencereye birlikte uygulanır. Listede bir harfe basınca o harfle başlayan temaya atlar.</div>
+                </div>
+                <div id="setTheme"></div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Koyu / açık</div>
+                  <div class="set-desc">Otomatik seçilirse Windows'un ayarına uyar.</div>
+                </div>
+                <div id="setMode" class="segmented">
+                  <button data-v="auto">Otomatik</button>
+                  <button data-v="dark">Koyu</button>
+                  <button data-v="light">Açık</button>
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Saf siyah arka plan</div>
+                  <div class="set-desc">Koyu temalarda zemin kapkara olur.</div>
+                </div>
+                <button id="setPureBlack" class="kswitch"></button>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Buzlu cam efekti</div>
+                  <div class="set-desc">Pencerenin arkası bulanık ve yarı saydam görünür.</div>
+                </div>
+                <button id="setAcrylic" class="kswitch"></button>
+              </div>
+              <div id="glassRow" class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Cam yoğunluğu</div>
+                  <div class="set-desc">Azaldıkça arkadaki pencereler daha çok görünür.</div>
+                </div>
+                <div id="setGlass" class="kslider-host"></div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Eğlence modu ✨</div>
+                  <div class="set-desc">Boş satırda ipuçları ve gizli kelimelerle küçük animasyonlar.</div>
+                </div>
+                <button id="setFun" class="kswitch"></button>
+              </div>
+            </div>
+          </section>
+
+          <section id="secFont">
+            <h2>Yazı tipi</h2>
+            <div class="set-card">
+              <div class="set-row">
+                <div class="set-label"><div class="set-name">Yazı tipi</div></div>
+                <div id="setFontFamily"></div>
+              </div>
+              <div class="set-row">
+                <div class="set-label"><div class="set-name">Kalınlık</div></div>
+                <div id="setFontWeight" class="segmented">
+                  <button data-v="200">Çok ince</button>
+                  <button data-v="300">İnce</button>
+                  <button data-v="400">Normal</button>
+                  <button data-v="500">Orta</button>
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Yazı boyutu</div>
+                  <div class="set-desc">Ctrl + fare tekerleğiyle de değişir.</div>
+                </div>
+                <div class="stepper">
+                  <button id="fontDown" type="button">−</button>
+                  <span id="fontSizeLabel">13</span>
+                  <button id="fontUp" type="button">+</button>
+                </div>
+              </div>
+              <div class="set-row">
+                <div id="fontPreview" class="font-preview">PS C:\&gt; claude  ~ 0O 1lI {}=&gt; çğışöü</div>
+              </div>
+            </div>
+          </section>
+
+          <section id="secTerm">
+            <h2>Terminal</h2>
+            <div class="set-card">
+              <div class="set-row">
+                <div class="set-label"><div class="set-name">İmleç şekli</div></div>
+                <div id="setCursorStyle" class="segmented">
+                  <button data-v="bar">▏ Çizgi</button>
+                  <button data-v="block">█ Blok</button>
+                  <button data-v="underline">▁ Alt çizgi</button>
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-label"><div class="set-name">İmleç yanıp sönsün</div></div>
+                <button id="setCursorBlink" class="kswitch"></button>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Satır aralığı</div>
+                  <div class="set-desc">Satırlar arasındaki boşluk.</div>
+                </div>
+                <div id="setLineHeight" class="kslider-host"></div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Geçmiş</div>
+                  <div class="set-desc">Yukarı kaydırınca en fazla kaç satır geri gidilebilsin.</div>
+                </div>
+                <div id="setScrollback"></div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Seçince kopyala</div>
+                  <div class="set-desc">Fareyle seçtiğin yazı Ctrl+C'ye basmadan panoya kopyalanır.</div>
+                </div>
+                <button id="setCopyOnSelect" class="kswitch"></button>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Sağ tık ile kopyala / yapıştır</div>
+                  <div class="set-desc">Seçim varsa kopyalar, yoksa yapıştırır.</div>
+                </div>
+                <button id="setRightClick" class="kswitch"></button>
+              </div>
+            </div>
+          </section>
+
+          <section id="secKeys">
+            <h2>Kısayollar</h2>
+            <div class="keys-intro">
+              Değiştirmek istediğin kısayola tıkla, sonra yeni tuşlara bas. <b>+</b> ile aynı işe ikinci bir kısayol
+              ekleyebilirsin. Tuşlar Ctrl veya Alt ile birlikte olmalı.
+            </div>
+            <div id="keyGroups"></div>
+            <div class="set-inline end keys-foot">
+              <button id="resetKeys" class="set-btn small">Kısayolları varsayılana döndür</button>
+            </div>
+          </section>
+
+          <section id="secShells">
+            <h2>Kabuklar</h2>
+            <div class="set-card">
+              <div id="shellList"></div>
+              <div class="set-row wrap add-shell">
+                <div class="set-label">
+                  <div class="set-name">Kabuk ekle</div>
+                  <div class="set-desc">Listede olmayan bir programı (Python, Node, SSH, WSL…) kabuk olarak ekle.</div>
+                </div>
+                <div class="set-sub add-grid">
+                  <input id="newShellName" class="set-input" spellcheck="false" autocomplete="off" placeholder="Ad (örn. Python)">
+                  <div class="set-inline">
+                    <input id="newShellFile" class="set-input" spellcheck="false" autocomplete="off" placeholder="Program (örn. python.exe veya tam yolu)">
+                    <button id="browseProgram" class="set-btn">Gözat…</button>
+                  </div>
+                  <input id="newShellArgs" class="set-input" spellcheck="false" autocomplete="off" placeholder="Ek parametreler (isteğe bağlı)">
+                  <div class="set-inline end">
+                    <span id="addShellError" class="set-error"></span>
+                    <button id="addShell" class="set-btn primary">Ekle</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="set-footer">
+            <span>Değişiklikler hemen uygulanır ve bu bilgisayarda kaydedilir.</span>
+            <button id="resetSettings" class="set-btn danger">Tüm ayarları sıfırla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="../node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
+  <script src="../node_modules/@xterm/addon-unicode11/lib/addon-unicode11.js"></script>
+  <script src="ui.js"></script>
+  <script src="keys.js"></script>
+  <script src="themes.js"></script>
+  <script src="fun.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
