@@ -2,9 +2,12 @@
 // Eğlence katmanı: terminalin üstünde çizilen animasyonlu emojiler ve boş satır ipucu
 
 // Kelimeler Türkçe harfsiz ve küçük harfle yazılır; funScene yazılanı aynı hale getirip bakar
+// İki dildeki kelimeler de her zaman çalışır
 const FUN_WORDS = {
   kedi: 'kedi', kopek: 'kopek', kus: 'kus', balik: 'balik', kar: 'kar',
   fisek: 'fisek', 'havai fisek': 'fisek', kalp: 'kalp',
+  cat: 'kedi', dog: 'kopek', bird: 'kus', fish: 'balik', snow: 'kar',
+  fireworks: 'fisek', firework: 'fisek', heart: 'kalp',
 };
 const TR_PLAIN = { ı: 'i', ş: 's', ç: 'c', ğ: 'g', ö: 'o', ü: 'u' };
 
@@ -81,7 +84,7 @@ class FunLayer {
     this.canvas.className = 'fun-canvas';
     this.hint = document.createElement('div');
     this.hint.className = 'fun-hint';
-    this.hint.textContent = FUN_HINT;
+    this.hint.textContent = t(FUN_HINT);
     this.hint.hidden = true;
     this.tips = document.createElement('div');
     this.tips.className = 'cmd-tips';
@@ -102,7 +105,7 @@ class FunLayer {
     if (!this.running) {
       this.running = true;
       this.last = performance.now();
-      requestAnimationFrame((t) => this.frame(t));
+      requestAnimationFrame((now) => this.frame(now));
     }
   }
 
@@ -142,7 +145,7 @@ class FunLayer {
       (s.vy > 0 && s.y > h + m) || (s.vy < 0 && s.y < -h - m);
     this.sprites = this.sprites.filter((s) => !gone(s));
     this.sprites.push(...born);
-    if (this.sprites.length) requestAnimationFrame((t) => this.frame(t));
+    if (this.sprites.length) requestAnimationFrame((now) => this.frame(now));
     else { this.running = false; ctx.clearRect(0, 0, w, h); }
   }
 
@@ -177,6 +180,7 @@ class FunLayer {
   // ---------- Boş satır ipucu ----------
   showHint(x, y, cellH, font, maxW) {
     place(this.hint, x, y, cellH, font);
+    this.hint.textContent = t(FUN_HINT);   // dil değişmiş olabilir
     this.hint.style.maxWidth = Math.max(0, maxW) + 'px';
     this.hint.hidden = maxW < 60;
   }
@@ -192,12 +196,15 @@ class FunLayer {
     this.tips.style.width = Math.max(0, maxW) + 'px';
     if (maxW < 60) { this.hideTips(); return; }
     const list = TIPS[kind] || TIPS.powershell;
-    if (list !== this.tipList) { this.tipList = list; this.tipQueue = []; this.tips.replaceChildren(); }
-    this.tips.hidden = false;
-    if (!this.tipTimer) {
-      if (!this.tips.firstChild) this.nextTip();
-      this.tipTimer = setInterval(() => this.nextTip(), TIP_EVERY);
+    if (list !== this.tipList || LANG !== this.tipLang) {
+      this.tipList = list;
+      this.tipLang = LANG;
+      this.tipQueue = [];
+      this.tips.replaceChildren();
     }
+    this.tips.hidden = false;
+    if (!this.tips.firstChild) this.nextTip();
+    if (!this.tipTimer) this.tipTimer = setInterval(() => this.nextTip(), TIP_EVERY);
   }
 
   hideTips() {
@@ -214,8 +221,8 @@ class FunLayer {
     el.className = 'cmd-tip';
     const c = document.createElement('span');
     c.className = 'cmd-tip-cmd';
-    c.textContent = cmd;
-    el.append('💡 dene: ', c, '  · ' + desc);
+    c.textContent = tq(cmd);   // "mkdir yeni-klasor" → "mkdir new-folder"
+    el.append(t('💡 dene: '), c, '  · ' + t(desc));
     const old = this.tips.querySelectorAll('.cmd-tip:not(.out)');
     old.forEach((o) => { o.classList.add('out'); setTimeout(() => o.remove(), 400); });
     this.tips.append(el);

@@ -155,6 +155,16 @@
             <div class="set-card">
               <div class="set-row">
                 <div class="set-label">
+                  <div class="set-name">Dil / Language</div>
+                  <div class="set-desc">Kabuk'un menülerinin ve yazılarının dili.</div>
+                </div>
+                <div id="setLang" class="segmented">
+                  <button data-v="tr">Türkçe</button>
+                  <button data-v="en">English</button>
+                </div>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
                   <div class="set-name">Tema</div>
                   <div class="set-desc">Renkler terminale ve pencereye birlikte uygulanır. Listede bir harfe basınca o harfle başlayan temaya atlar.</div>
                 </div>
@@ -334,7 +344,7 @@
               <div class="set-row wrap">
                 <div class="set-label">
                   <div class="set-name">Claude Code</div>
-                  <div class="set-desc">Claude Code Kabuk'u tanımadığı için kendiliğinden bildirim göndermez. Bir kez ayarlaman yeterli:
+                  <div class="set-desc" data-i18n-html>Claude Code Kabuk'u tanımadığı için kendiliğinden bildirim göndermez. Bir kez ayarlaman yeterli:
                     Claude Code'da <b>/config</b> yaz, <b>Notifications</b> satırını <b>Ghostty</b> yap.</div>
                 </div>
                 <div class="set-sub"><div class="set-path">/config  →  Notifications  →  Ghostty</div></div>
@@ -342,7 +352,7 @@
               <div class="set-row wrap">
                 <div class="set-label">
                   <div class="set-name">Codex</div>
-                  <div class="set-desc">Kullanıcı klasöründeki <b>.codex\config.toml</b> dosyasına şunu ekle:</div>
+                  <div class="set-desc" data-i18n-html>Kullanıcı klasöründeki <b>.codex\config.toml</b> dosyasına şunu ekle:</div>
                 </div>
                 <div class="set-sub"><div class="set-path set-pre">[tui]
 notifications = true
@@ -353,7 +363,7 @@ notification_method = "osc9"</div></div>
 
           <section id="secKeys">
             <h2>Kısayollar</h2>
-            <div class="keys-intro">
+            <div class="keys-intro" data-i18n-html>
               Değiştirmek istediğin kısayola tıkla, sonra yeni tuşlara bas. <b>+</b> ile aynı işe ikinci bir kısayol
               ekleyebilirsin. Tuşlar Ctrl veya Alt ile birlikte olmalı.
             </div>
@@ -404,6 +414,7 @@ notification_method = "osc9"</div></div>
   <script src="../node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
   <script src="../node_modules/@xterm/addon-unicode11/lib/addon-unicode11.js"></script>
   <script src="vendor/addon-webgl.js"></script>
+  <script src="i18n.js"></script>
   <script src="ui.js"></script>
   <script src="keys.js"></script>
   <script src="themes.js"></script>

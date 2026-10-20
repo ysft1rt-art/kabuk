@@ -319,7 +319,7 @@ window.KUI = (() => {
 
   // ---------- Onay penceresi ----------
   let modalOpen = false;
-  function confirm({ title, message, ok = 'Tamam', cancel = 'Vazgeç', danger = false }) {
+  function confirm({ title, message, ok = t('Tamam'), cancel = t('Vazgeç'), danger = false }) {
     return new Promise((resolve) => {
       closeMenus();
       closeTip();
@@ -380,7 +380,7 @@ window.KUI = (() => {
   }
   function showTip(el) {
     if (!el.isConnected || !el.dataset.tip) return;
-    tip.textContent = el.dataset.tip;
+    tip.textContent = tq(el.dataset.tip);   // ipuçları Türkçe yazılır, seçili dile burada çevrilir (i18n.js)
     tip.hidden = false;
     const r = el.getBoundingClientRect();
     const w = tip.offsetWidth;

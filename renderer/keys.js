@@ -76,7 +76,7 @@ window.KabukKeys = (() => {
   // Ekranda gösterilecek parçalar: ['Ctrl', 'Alt', '↓']
   function parts(combo) {
     const { mods, key } = split(combo);
-    return [...mods, KEY_NAMES[key] || key];
+    return [...mods, KEY_NAMES[key] ? tq(KEY_NAMES[key]) : key];   // "Boşluk" → "Space"
   }
   const label = (combo) => parts(combo).join('+');
 
@@ -85,13 +85,13 @@ window.KabukKeys = (() => {
     const { mods, key } = split(combo);
     const fkey = /^F\d{1,2}$/.test(key);
     if (!mods.includes('Ctrl') && !mods.includes('Alt') && !fkey) {
-      return 'Ctrl veya Alt ile birlikte bas (tek başına tuş yazı yazarken lazım).';
+      return t('Ctrl veya Alt ile birlikte bas (tek başına tuş yazı yazarken lazım).');
     }
     // Türkçe klavyede AltGr = Ctrl+Alt; AltGr+Q gibi tuşlar @ yazar, kısayol yapılırsa @ yazılamaz
     if (mods.includes('Ctrl') && mods.includes('Alt') && key.length === 1 && !/[\p{L}\p{N}]/u.test(key)) {
-      return `Bu birleşim "${key}" karakterini yazıyor (AltGr). Başka bir tuş dene.`;
+      return t('Bu birleşim "{key}" karakterini yazıyor (AltGr). Başka bir tuş dene.', { key });
     }
-    if (combo === 'Ctrl+C') return 'Ctrl+C programları durdurmak için ayrılmış.';
+    if (combo === 'Ctrl+C') return t('Ctrl+C programları durdurmak için ayrılmış.');
     return null;
   }
 

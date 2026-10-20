@@ -13,6 +13,21 @@ let customShells = [];
 let confirmClose = true;
 let forceClose = false;
 
+// Ana sürecin kendi yazıları (klasör seçme pencereleri, uyarılar). Dil renderer'dan gelir (settings:apply)
+let lang = 'tr';
+const MAIN_EN = {
+  'Başlangıç klasörünü seç': 'Choose start folder',
+  'Kabuk programını seç': 'Choose shell program',
+  'Programlar': 'Programs',
+  'Tüm dosyalar': 'All files',
+  '"{cwd}" klasörü bulunamadı, kullanıcı klasöründe açıldı.': 'Folder "{cwd}" was not found; opened in your user folder instead.',
+  '"{name}" başlatılamadı ({file}). {fallback} açıldı.': 'Could not start "{name}" ({file}). Opened {fallback} instead.',
+};
+function mt(text, vars = {}) {
+  const s = lang === 'en' && MAIN_EN[text] ? MAIN_EN[text] : text;
+  return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+}
+
 function availableShells() {
   const list = [];
   const pwsh7 = 'C:\\Program Files\\PowerShell\\7\\pwsh.exe';
@@ -140,6 +155,7 @@ ipcMain.handle('settings:apply', (_e, s) => {
       .map((c) => ({ id: String(c.id), name: String(c.name || c.file), file: c.file.trim(), args: (c.args || []).map(String) }));
   }
   if (typeof s.confirmClose === 'boolean') confirmClose = s.confirmClose;
+  if (['tr', 'en'].includes(s.lang)) lang = s.lang;
   if (['normal', 'maximized', 'remember'].includes(s.startMode)) writeState({ startMode: s.startMode });
 });
 
@@ -147,7 +163,7 @@ ipcMain.handle('paths:get', () => ({ home: os.homedir(), desktop: app.getPath('d
 
 ipcMain.handle('dialog:folder', async (_e, current) => {
   const r = await dialog.showOpenDialog(win, {
-    title: 'Başlangıç klasörünü seç',
+    title: mt('Başlangıç klasörünü seç'),
     defaultPath: resolveCwd(current).dir,
     properties: ['openDirectory'],
   });
@@ -156,9 +172,9 @@ ipcMain.handle('dialog:folder', async (_e, current) => {
 
 ipcMain.handle('dialog:program', async () => {
   const r = await dialog.showOpenDialog(win, {
-    title: 'Kabuk programını seç',
+    title: mt('Kabuk programını seç'),
     defaultPath: 'C:\\Program Files',
-    filters: [{ name: 'Programlar', extensions: ['exe', 'bat', 'cmd'] }, { name: 'Tüm dosyalar', extensions: ['*'] }],
+    filters: [{ name: mt('Programlar'), extensions: ['exe', 'bat', 'cmd'] }, { name: mt('Tüm dosyalar'), extensions: ['*'] }],
     properties: ['openFile'],
   });
   return r.canceled ? null : r.filePaths[0];
@@ -169,7 +185,7 @@ ipcMain.handle('pty:create', (event, { shellId, cols, rows, cwd }) => {
   let sh = shells.find((s) => s.id === shellId) || shells[0];
   const where = resolveCwd(cwd);
   const notes = [];
-  if (!where.ok) notes.push(`"${cwd}" klasörü bulunamadı, kullanıcı klasöründe açıldı.`);
+  if (!where.ok) notes.push(mt('"{cwd}" klasörü bulunamadı, kullanıcı klasöründe açıldı.', { cwd }));
   const spawn = (s) => pty.spawn(s.file, s.args, {
     name: 'xterm-256color',
     cols: Math.max(cols || 80, 2),
@@ -183,7 +199,7 @@ ipcMain.handle('pty:create', (event, { shellId, cols, rows, cwd }) => {
     p = spawn(sh);
   } catch (err) {
     // Özel kabuk yanlış yazılmış olabilir: ilk hazır kabukla devam et
-    notes.push(`"${sh.name}" başlatılamadı (${sh.file}). ${shells[0].name} açıldı.`);
+    notes.push(mt('"{name}" başlatılamadı ({file}). {fallback} açıldı.', { name: sh.name, file: sh.file, fallback: shells[0].name }));
     sh = shells[0];
     p = spawn(sh);
   }

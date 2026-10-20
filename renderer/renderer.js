@@ -7,6 +7,7 @@ const THEMES = window.KABUK_THEMES;
 // ---------- Ayarlar (bu bilgisayarda saklanır) ----------
 const DEFAULTS = {
   v: 6,
+  lang: null,          // tr / en; boşsa Windows'un diline göre seçilir (i18n.js)
   theme: 'kar',
   mode: 'auto',        // auto (Windows'a uy) / dark / light — bütün temalarda geçerli
   acrylic: true,       // buzlu cam
@@ -54,6 +55,9 @@ try {
   Object.assign(settings, saved);
 } catch {}
 if (!THEMES[settings.theme]) settings.theme = DEFAULTS.theme;
+const systemLang = () => ((navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en');
+if (!['tr', 'en'].includes(settings.lang)) settings.lang = systemLang();
+LANG = settings.lang;
 if (!settings.keys || typeof settings.keys !== 'object' || Array.isArray(settings.keys)) settings.keys = {};
 for (const [k, v] of Object.entries(settings.keys)) {
   if (!Array.isArray(v) || v.some((c) => typeof c !== 'string')) delete settings.keys[k];
@@ -150,13 +154,13 @@ function uiColors() {
 function termTheme() {
   const th = resolveTheme();
   const ui = uiColors();
-  const t = { ...th.term };
-  if (settings.pureBlack && !th.light) { t.background = '#000000'; t.cursorAccent = '#000000'; }
-  if (settings.acrylic) t.background = '#00000000';
-  t.scrollbarSliderBackground = withAlpha(ui.dim, 0.25);
-  t.scrollbarSliderHoverBackground = withAlpha(ui.dim, 0.45);
-  t.scrollbarSliderActiveBackground = withAlpha(ui.accent, 0.5);
-  return t;
+  const tt = { ...th.term };
+  if (settings.pureBlack && !th.light) { tt.background = '#000000'; tt.cursorAccent = '#000000'; }
+  if (settings.acrylic) tt.background = '#00000000';
+  tt.scrollbarSliderBackground = withAlpha(ui.dim, 0.25);
+  tt.scrollbarSliderHoverBackground = withAlpha(ui.dim, 0.45);
+  tt.scrollbarSliderActiveBackground = withAlpha(ui.accent, 0.5);
+  return tt;
 }
 
 function applyTheme() {
@@ -216,19 +220,20 @@ const boldWeight = () => Math.min(800, Number(settings.fontWeight) + 300);
 function renderAppearance() {
   ui.theme.setOptions(Object.keys(THEMES).map((key) => {
     const th = resolveTheme(key);
-    const t = th.term;
+    const term = th.term;
     return {
       value: key,
-      label: th.name,
-      group: THEMES[key].group || 'Kabuk temaları',
+      label: THEMES[key].group ? th.name : t(th.name),
+      group: t(THEMES[key].group || 'Kabuk temaları'),
       swatch: {
-        bg: settings.pureBlack && !th.light ? '#000000' : t.background,
-        colors: [t.foreground, t.red, t.green, t.yellow, t.blue, t.magenta],
+        bg: settings.pureBlack && !th.light ? '#000000' : term.background,
+        colors: [term.foreground, term.red, term.green, term.yellow, term.blue, term.magenta],
       },
     };
   }));
   ui.theme.setValue(settings.theme);
   setSegmented('setMode', settings.mode);
+  setSegmented('setLang', settings.lang);
   ui.pureBlack.setChecked(settings.pureBlack);
   ui.acrylic.setChecked(settings.acrylic);
   ui.fun.setChecked(settings.fun);
@@ -309,8 +314,8 @@ class Pane {
       attend(this, { title, body: body.join(';') });
       return true;
     });
-    this.term.onTitleChange((t) => {
-      this.title = t;
+    this.term.onTitleChange((title) => {
+      this.title = title;
       if (this.tab) updateTabTitle(this.tab); else renderHidden();
     });
 
@@ -624,7 +629,7 @@ function leaves(node) {
   return node instanceof Pane ? [node] : [...leaves(node.a), ...leaves(node.b)];
 }
 // Gizli paneller de dahil: tema/ayar değişikliği geri açıldıklarında da geçerli olsun
-function forEachPane(fn) { for (const t of tabs) leaves(t.root).forEach(fn); hiddenPanes.forEach(fn); }
+function forEachPane(fn) { for (const tb of tabs) leaves(tb.root).forEach(fn); hiddenPanes.forEach(fn); }
 
 function replaceNode(oldNode, newNode) {
   const parent = oldNode.parent;
@@ -681,10 +686,10 @@ async function newTab(shellId = settings.shell, existingPane = null) {
 
 function activateTab(tab) {
   activeTab = tab;
-  for (const t of tabs) {
-    const on = t === tab;
-    t.el.classList.toggle('active', on);
-    t.tabEl.classList.toggle('active', on);
+  for (const tb of tabs) {
+    const on = tb === tab;
+    tb.el.classList.toggle('active', on);
+    tb.tabEl.classList.toggle('active', on);
   }
   syncRenderers();
   leaves(tab.root).forEach((p) => p.fitSoon());
@@ -708,10 +713,14 @@ function closeTab(tab) {
   if (activeTab === tab) activateTab(tabs[Math.min(idx, tabs.length - 1)]);
 }
 
+// Panelin adı: programın koyduğu başlık, yoksa kabuğun adı ("Komut İstemi" gibi adlar çevrilir)
+const paneName = (p) => tq((p && (p.title || p.shellName)) || 'Terminal');
+
 function updateTabTitle(tab) {
+  if (tab === settingsTab) { tab.titleEl.textContent = t('Ayarlar'); tab.tabEl.dataset.tip = 'Ayarlar'; return; }
   const panes = leaves(tab.root);
   const p = tab.activePane || panes[0];
-  const title = (p && (p.title || p.shellName)) || 'Terminal';
+  const title = paneName(p);
   tab.titleEl.textContent = title;
   tab.tabEl.dataset.tip = title;
   tab.badgeEl.hidden = panes.length < 2;
@@ -739,8 +748,8 @@ function startCwd() {
 const BASH_ENV = 'MINGW(?:64|32)|UCRT64|CLANG(?:64|32|ARM64)|MSYS';
 function paneCwd(pane) {
   // Git Bash pencere başlığına "UCRT64:/c/Users/x" yazar; en güvenilir kaynak bu
-  const t = new RegExp(`^(?:${BASH_ENV}):(.+)$`).exec(pane.title || '');
-  if (t) return bashToWindows(t[1].trim());
+  const m = new RegExp(`^(?:${BASH_ENV}):(.+)$`).exec(pane.title || '');
+  if (m) return bashToWindows(m[1].trim());
   const b = pane.term.buffer.active;
   if (b.type !== 'normal') return null;
   let y = b.baseY + b.cursorY;
@@ -781,20 +790,20 @@ function bashToWindows(p) {
 
 // ---------- Kısa bildirim ----------
 function showToast(text) {
-  const t = $('toast');
-  t.textContent = text;
-  t.hidden = false;
+  const el = $('toast');
+  el.textContent = text;
+  el.hidden = false;
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => { t.hidden = true; }, 5000);
+  showToast.timer = setTimeout(() => { el.hidden = true; }, 5000);
 }
 
 // ---------- Bağlantılar ----------
 async function confirmLink(uri) {
   if (!/^https?:\/\//i.test(uri) || KUI.isModalOpen()) return;
   const ok = await KUI.confirm({
-    title: 'Bağlantı açılsın mı?',
-    message: `${uri}\n\nTarayıcında açılacak. Adresi tanımıyorsan açma.`,
-    ok: 'Aç',
+    title: t('Bağlantı açılsın mı?'),
+    message: t('{uri}\n\nTarayıcında açılacak. Adresi tanımıyorsan açma.', { uri }),
+    ok: t('Aç'),
   });
   if (ok) api.openLink(uri);
 }
@@ -815,11 +824,11 @@ function attend(pane, { title = '', body = '', bell = false }) {
   pane.attention = true;
   renderAttention();
   if (onScreen) return;   // aynı sekmede başka panele bakıyorsun: panelin çerçevesi yanıp söner, yeter
-  const name = pane.title || pane.shellName || 'Terminal';
+  const name = paneName(pane);
   api.notify({
     id: pane.id,
     title: (title || name).trim(),
-    body: (body || (bell ? 'Dikkatini bekliyor.' : '')).trim() + (title && title !== name ? `\n${name}` : ''),
+    body: (body || (bell ? t('Dikkatini bekliyor.') : '')).trim() + (title && title !== name ? `\n${name}` : ''),
     toast: settings.notifyToast,
     flash: settings.notifyFlash,
   });
@@ -835,10 +844,10 @@ function markSeen() {
 window.addEventListener('focus', markSeen);
 
 function renderAttention() {
-  for (const t of tabs) {
-    const panes = leaves(t.root);
+  for (const tb of tabs) {
+    const panes = leaves(tb.root);
     for (const p of panes) p.el.classList.toggle('attention', p.attention);
-    t.tabEl.classList.toggle('attention', panes.some((p) => p.attention));
+    tb.tabEl.classList.toggle('attention', panes.some((p) => p.attention));
   }
   $('hiddenBtn').classList.toggle('attention', hiddenPanes.some((p) => p.attention));
 }
@@ -969,7 +978,7 @@ function renderHidden() {
   for (const p of hiddenPanes) {
     const row = document.createElement('div');
     row.className = 'hidden-item' + (p.attention ? ' attention' : '');
-    const time = p.hiddenAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    const time = p.hiddenAt.toLocaleTimeString(i18nLocale(), { hour: '2-digit', minute: '2-digit' });
     row.innerHTML = `
       <div class="hidden-info">
         <div class="hidden-title"></div>
@@ -977,13 +986,13 @@ function renderHidden() {
         <div class="hidden-meta"></div>
       </div>
       <div class="hidden-actions">
-        <button class="mini-btn wide" data-act="split" data-tip="Seçili panelin yanında aç">Yanına aç</button>
-        <button class="mini-btn wide" data-act="tab" data-tip="Yeni sekmede aç">Sekmede aç</button>
+        <button class="mini-btn wide" data-act="split" data-tip="Seçili panelin yanında aç">${t('Yanına aç')}</button>
+        <button class="mini-btn wide" data-act="tab" data-tip="Yeni sekmede aç">${t('Sekmede aç')}</button>
         <button class="mini-btn danger" data-act="close" data-tip="Terminali kapat">×</button>
       </div>`;
-    row.querySelector('.hidden-title').textContent = p.title || p.shellName || 'Terminal';
+    row.querySelector('.hidden-title').textContent = paneName(p);
     row.querySelector('.hidden-last').textContent = lastLine(p) || '—';
-    row.querySelector('.hidden-meta').textContent = `${time} · ${p.hiddenFrom || ''} sekmesinden`;
+    row.querySelector('.hidden-meta').textContent = t('{time} · {tab} sekmesinden', { time, tab: p.hiddenFrom || '' });
     row.querySelector('[data-act="split"]').onclick = () => showHiddenPane(p, 'split');
     row.querySelector('[data-act="tab"]').onclick = () => showHiddenPane(p, 'tab');
     row.querySelector('[data-act="close"]').onclick = () => closePane(p);
@@ -1060,7 +1069,7 @@ function rebuildKeys() {
 function paintKeyTips(root) {
   for (const el of root.querySelectorAll('[data-key-action]')) {
     const k = keysFor(el.dataset.keyAction)[0];
-    el.dataset.tip = el.dataset.tipText + (k ? ` (${KabukKeys.label(k)})` : '') + (el.dataset.tipMore || '');
+    el.dataset.tip = t(el.dataset.tipText) + (k ? ` (${KabukKeys.label(k)})` : '') + (el.dataset.tipMore ? t(el.dataset.tipMore) : '');
   }
 }
 
@@ -1090,15 +1099,15 @@ function renderHelp() {
   for (const g of KabukKeys.GROUPS) {
     const box = document.createElement('div');
     box.innerHTML = '<div class="help-group"></div><dl class="shortcuts"></dl>';
-    box.firstElementChild.textContent = g.name;
+    box.firstElementChild.textContent = t(g.name);
     const dl = box.lastElementChild;
     const rows = KEY_ACTIONS.filter((a) => a.group === g.id && keysFor(a.id).length)
       .map((a) => [keysFor(a.id).map(KabukKeys.label).join('  '), a.name]);
     for (const [k, name] of [...rows, ...(FIXED_KEYS[g.id] || [])]) {
       const dt = document.createElement('dt');
-      dt.textContent = k;
+      dt.textContent = k === 'Sağ tık' ? t(k) : k;
       const dd = document.createElement('dd');
-      dd.textContent = name;
+      dd.textContent = t(name);
       dl.append(dt, dd);
     }
     host.appendChild(box);
@@ -1160,29 +1169,29 @@ document.addEventListener('mousedown', (e) => {
 
 function renderShellMenu() {
   const menu = $('shellMenu');
-  menu.innerHTML = '<div class="popover-title">Yeni sekme</div>';
+  menu.innerHTML = `<div class="popover-title">${t('Yeni sekme')}</div>`;
   for (const s of shells) {
     const b = document.createElement('button');
     b.className = 'menu-item';
-    b.textContent = s.name + (s.id === settings.shell ? '  ✓' : '');
+    b.textContent = tq(s.name) + (s.id === settings.shell ? '  ✓' : '');
     b.onclick = () => { closePopovers(); newTab(s.id); };
     menu.appendChild(b);
   }
   const hint = document.createElement('div');
   hint.className = 'popover-title';
   hint.style.marginTop = '10px';
-  hint.textContent = 'Varsayılan kabuk';
+  hint.textContent = t('Varsayılan kabuk');
   menu.appendChild(hint);
   for (const s of shells) {
     const b = document.createElement('button');
     b.className = 'menu-item';
-    b.textContent = (s.id === settings.shell ? '● ' : '○ ') + s.name;
+    b.textContent = (s.id === settings.shell ? '● ' : '○ ') + tq(s.name);
     b.onclick = () => { settings.shell = s.id; saveSettings(); renderShellMenu(); if (settingsTab) renderSettings(); };
     menu.appendChild(b);
   }
   const more = document.createElement('button');
   more.className = 'menu-item menu-sep';
-  more.textContent = 'Ayarlar…';
+  more.textContent = t('Ayarlar…');
   more.onclick = openSettings;
   menu.appendChild(more);
 }
@@ -1210,8 +1219,7 @@ function openSettings(section) {
   closePopovers();
   if (!settingsTab) {
     settingsTab = makeTab(GEAR_ICON);
-    settingsTab.titleEl.textContent = 'Ayarlar';
-    settingsTab.tabEl.dataset.tip = 'Ayarlar';
+    updateTabTitle(settingsTab);
     settingsTab.el.classList.add('settings-content');
     settingsTab.el.appendChild(settingsPage);
     settingsPage.hidden = false;
@@ -1239,6 +1247,10 @@ for (const b of settingsPage.querySelectorAll('.set-nav [data-sec]')) b.onclick 
 settingsScroll.addEventListener('scroll', markNav, { passive: true });
 KUI.scrollbar(settingsScroll);
 
+function scrollbackOptions() {
+  return [1000, 5000, 10000, 50000].map((n) => ({ value: n, label: n.toLocaleString(i18nLocale()) + ' ' + t('satır') }));
+}
+
 // Chromium'un hazır öğeleri yerine Kabuk'un kendi bileşenleri (ui.js)
 const ui = {
   theme: KUI.select($('setTheme'), { width: 240, maxHeight: 460, onChange: (v) => { settings.theme = v; saveSettings(); applyTheme(); } }),
@@ -1246,12 +1258,12 @@ const ui = {
   fontFamily: KUI.select($('setFontFamily'), { width: 220, onChange: (v) => { settings.fontFamily = v; applyFont(); } }),
   scrollback: KUI.select($('setScrollback'), {
     width: 160,
-    options: [1000, 5000, 10000, 50000].map((n) => ({ value: n, label: n.toLocaleString('tr-TR') + ' satır' })),
+    options: scrollbackOptions(),
     onChange: (v) => changeSetting('scrollback', v),
   }),
   glass: KUI.slider($('setGlass'), {
     min: 0.5, max: 0.95, step: 0.05, value: settings.glass,
-    format: (v) => `%${Math.round(v * 100)}`,
+    format: (v) => (LANG === 'en' ? `${Math.round(v * 100)}%` : `%${Math.round(v * 100)}`),
     onInput: (v) => { settings.glass = v; saveSettings(); applyTheme(); },
   }),
   lineHeight: KUI.slider($('setLineHeight'), {
@@ -1278,7 +1290,7 @@ const ui = {
 $('testNotify').onclick = () => api.notify({
   id: activeTab?.activePane?.id,
   title: 'Kabuk',
-  body: 'Bildirimler çalışıyor. Claude Code işini bitirince böyle haber vereceğim.',
+  body: t('Bildirimler çalışıyor. Claude Code işini bitirince böyle haber vereceğim.'),
   toast: settings.notifyToast,
   flash: false,
 });
@@ -1286,6 +1298,25 @@ $('testNotify').onclick = () => api.notify({
 for (const b of $('setMode').querySelectorAll('[data-v]')) {
   b.onclick = () => { settings.mode = b.dataset.v; saveSettings(); applyTheme(); };
 }
+for (const b of $('setLang').querySelectorAll('[data-v]')) {
+  b.onclick = () => { if (settings.lang === b.dataset.v) return; settings.lang = b.dataset.v; saveSettings(); applyLanguage(); };
+}
+
+// Dil değişince: sayfadaki sabit yazılar çevrilir, kodun oluşturduğu her şey yeniden çizilir
+function applyLanguage() {
+  LANG = settings.lang;
+  translatePage();
+  ui.scrollback.setOptions(scrollbackOptions());
+  for (const tab of tabs) updateTabTitle(tab);
+  rebuildKeys();
+  renderAppearance();
+  renderSettings();
+  renderHidden();
+  if (!$('shellMenu').classList.contains('hidden')) renderShellMenu();
+  forEachPane((p) => p.hintSoon());
+  syncMain();
+}
+
 for (const b of $('setFontWeight').querySelectorAll('[data-v]')) {
   b.onclick = () => { settings.fontWeight = Number(b.dataset.v); applyFont(); };
 }
@@ -1298,6 +1329,7 @@ async function syncMain() {
     customShells: settings.customShells,
     confirmClose: settings.confirmClose,
     startMode: settings.startMode,
+    lang: settings.lang,
   });
   shells = await api.listShells();
   if (!shells.some((s) => s.id === settings.shell)) settings.shell = shells[0]?.id;
@@ -1308,7 +1340,7 @@ function setSegmented(id, value) {
 }
 
 function renderSettings() {
-  ui.shell.setOptions(shells.map((s) => ({ value: s.id, label: s.name })));
+  ui.shell.setOptions(shells.map((s) => ({ value: s.id, label: tq(s.name) })));
   ui.shell.setValue(settings.shell);
 
   setSegmented('setStartDir', settings.startDir);
@@ -1344,15 +1376,15 @@ function renderSettings() {
     row.innerHTML = `
       <div class="set-label"><div class="set-name"></div><div class="set-desc set-mono"></div></div>
       <span class="set-tag"></span>`;
-    row.querySelector('.set-name').textContent = s.name;
+    row.querySelector('.set-name').textContent = tq(s.name);
     row.querySelector('.set-desc').textContent = s.file;
     const tag = row.querySelector('.set-tag');
-    if (s.id === settings.shell) tag.textContent = 'Varsayılan';
+    if (s.id === settings.shell) tag.textContent = t('Varsayılan');
     else tag.remove();
     if (s.custom) {
       const del = document.createElement('button');
       del.className = 'set-btn danger small';
-      del.textContent = 'Kaldır';
+      del.textContent = t('Kaldır');
       del.onclick = async () => {
         settings.customShells = settings.customShells.filter((c) => c.id !== s.id);
         saveSettings();
@@ -1407,7 +1439,7 @@ $('addShell').onclick = async () => {
   const name = $('newShellName').value.trim();
   const file = $('newShellFile').value.trim().replace(/^"(.*)"$/, '$1');
   const err = $('addShellError');
-  if (!file) { err.textContent = 'Program yolunu yaz veya Gözat ile seç.'; return; }
+  if (!file) { err.textContent = t('Program yolunu yaz veya Gözat ile seç.'); return; }
   err.textContent = '';
   settings.customShells = [...settings.customShells, {
     id: 'custom-' + Date.now(),
@@ -1419,18 +1451,19 @@ $('addShell').onclick = async () => {
   await syncMain();
   for (const id of ['newShellName', 'newShellFile', 'newShellArgs']) $(id).value = '';
   renderSettings();
-  showToast(`"${settings.customShells.at(-1).name}" eklendi. Yeni sekme menüsünden açabilirsin.`);
+  showToast(t('"{name}" eklendi. Yeni sekme menüsünden açabilirsin.', { name: settings.customShells.at(-1).name }));
 };
 $('resetSettings').onclick = async () => {
   const ok = await KUI.confirm({
-    title: 'Tüm ayarlar sıfırlansın mı?',
-    message: 'Tema, yazı tipi ve diğer bütün ayarlar varsayılana döner. Eklediğin kabuklar da silinir.',
-    ok: 'Sıfırla',
+    title: t('Tüm ayarlar sıfırlansın mı?'),
+    message: t('Tema, yazı tipi ve diğer bütün ayarlar varsayılana döner. Eklediğin kabuklar da silinir.'),
+    ok: t('Sıfırla'),
     danger: true,
   });
   if (!ok) return;
+  const lang = settings.lang;   // dil sıfırlanmaz: kullanıcı okuyamadığı bir dile düşmesin
   for (const k of Object.keys(settings)) delete settings[k];
-  Object.assign(settings, structuredClone(DEFAULTS));
+  Object.assign(settings, structuredClone(DEFAULTS), { lang });
   saveSettings();
   await syncMain();
   saveSettings();
@@ -1442,7 +1475,7 @@ $('resetSettings').onclick = async () => {
   rebuildKeys();
   await applyFont();
   renderSettings();
-  showToast('Ayarlar varsayılana döndü.');
+  showToast(t('Ayarlar varsayılana döndü.'));
 };
 
 // ---------- Ayarlar > Kısayollar ----------
@@ -1472,7 +1505,7 @@ function renderKeys() {
   for (const g of KabukKeys.GROUPS) {
     const title = document.createElement('div');
     title.className = 'keys-group';
-    title.textContent = g.name;
+    title.textContent = t(g.name);
     const card = document.createElement('div');
     card.className = 'set-card';
     for (const a of KEY_ACTIONS.filter((x) => x.group === g.id)) card.appendChild(keyRow(a));
@@ -1488,17 +1521,17 @@ function keyRow(a) {
   row.innerHTML = `
     <div class="set-label"><div class="set-name"></div><div class="set-desc"></div></div>
     <div class="kbd-list"></div>`;
-  row.querySelector('.set-name').textContent = a.name;
+  row.querySelector('.set-name').textContent = t(a.name);
   const desc = row.querySelector('.set-desc');
   if (recording?.id === a.id && recording.error) { desc.textContent = recording.error; desc.classList.add('set-error'); }
-  else if (a.desc) desc.textContent = a.desc;
+  else if (a.desc) desc.textContent = t(a.desc);
   else desc.remove();
 
   const list = row.querySelector('.kbd-list');
   const recChip = () => {
     const c = document.createElement('span');
     c.className = 'kbd-chip recording';
-    c.innerHTML = '<span class="kbd-live">Tuşlara bas…</span><span class="kbd-hint">Esc: vazgeç</span>';
+    c.innerHTML = `<span class="kbd-live">${t('Tuşlara bas…')}</span><span class="kbd-hint">${t('Esc: vazgeç')}</span>`;
     return c;
   };
   keys.forEach((combo, i) => {
@@ -1524,13 +1557,13 @@ function keyRow(a) {
     add.className = 'kbd-add';
     add.dataset.tip = keys.length ? 'Bir kısayol daha ekle' : 'Kısayol ata';
     add.innerHTML = '<svg viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9"/></svg>';
-    if (!keys.length) add.insertAdjacentText('beforeend', 'Ata');
+    if (!keys.length) add.insertAdjacentText('beforeend', t('Ata'));
     add.onclick = () => startRecording(a.id, -1);
     list.appendChild(add);
   }
   const reset = document.createElement('button');
   reset.className = 'kbd-reset';
-  reset.dataset.tip = 'Varsayılana döndür: ' + (a.keys.map(KabukKeys.label).join(', ') || 'yok');
+  reset.dataset.tip = t('Varsayılana döndür: {keys}', { keys: a.keys.map(KabukKeys.label).join(', ') || t('yok') });
   reset.innerHTML = RESET_ICON;
   reset.style.visibility = settings.keys[a.id] ? '' : 'hidden';
   reset.onclick = () => { recording = null; setKeys(a.id, a.keys); renderKeys(); };
@@ -1555,9 +1588,9 @@ async function assignKey(rec, combo) {
   const owner = KEY_ACTIONS.find((a) => a.id !== rec.id && keysFor(a.id).includes(combo));
   if (owner) {
     const ok = await KUI.confirm({
-      title: `${KabukKeys.label(combo)} zaten kullanılıyor`,
-      message: `Bu kısayol şu an "${owner.name}" için ayarlı. Buraya aktarılsın mı? "${owner.name}" bu kısayolu kaybeder.`,
-      ok: 'Aktar',
+      title: t('{key} zaten kullanılıyor', { key: KabukKeys.label(combo) }),
+      message: t('Bu kısayol şu an "{name}" için ayarlı. Buraya aktarılsın mı? "{name}" bu kısayolu kaybeder.', { name: t(owner.name) }),
+      ok: t('Aktar'),
     });
     if (!ok) { renderKeys(); return; }
     setKeys(owner.id, keysFor(owner.id).filter((c) => c !== combo));
@@ -1591,7 +1624,7 @@ window.addEventListener('keyup', (e) => {
   if (!recording) return;
   e.preventDefault();
   const live = document.querySelector('.kbd-live');
-  if (live) live.textContent = KabukKeys.heldModifiers(e) ? KabukKeys.heldModifiers(e) + '…' : 'Tuşlara bas…';
+  if (live) live.textContent = KabukKeys.heldModifiers(e) ? KabukKeys.heldModifiers(e) + '…' : t('Tuşlara bas…');
 }, true);
 // Başka yere tıklamak veya pencereden çıkmak kaydı iptal eder
 document.addEventListener('mousedown', (e) => {
@@ -1602,9 +1635,9 @@ window.addEventListener('blur', stopRecording);
 $('resetKeys').onclick = async () => {
   recording = null;
   const ok = await KUI.confirm({
-    title: 'Kısayollar sıfırlansın mı?',
-    message: 'Değiştirdiğin bütün kısayollar varsayılan hallerine döner.',
-    ok: 'Sıfırla',
+    title: t('Kısayollar sıfırlansın mı?'),
+    message: t('Değiştirdiğin bütün kısayollar varsayılan hallerine döner.'),
+    ok: t('Sıfırla'),
     danger: true,
   });
   if (!ok) return;
@@ -1612,16 +1645,16 @@ $('resetKeys').onclick = async () => {
   saveSettings();
   rebuildKeys();
   renderKeys();
-  showToast('Kısayollar varsayılana döndü.');
+  showToast(t('Kısayollar varsayılana döndü.'));
 };
 
 // Pencere kapatılırken birden fazla terminal varsa ana süreç sorar
 api.onConfirmClose(async (count) => {
   if (KUI.isModalOpen()) return;
   const ok = await KUI.confirm({
-    title: `${count} terminal açık`,
-    message: 'Hepsi kapatılsın mı? İçlerinde çalışan programlar da kapanır.',
-    ok: 'Hepsini kapat',
+    title: t('{n} terminal açık', { n: count }),
+    message: t('Hepsi kapatılsın mı? İçlerinde çalışan programlar da kapanır.'),
+    ok: t('Hepsini kapat'),
     danger: true,
   });
   if (ok) api.closeWindow(true);
@@ -1629,6 +1662,7 @@ api.onConfirmClose(async (count) => {
 
 // ---------- Başlat ----------
 (async () => {
+  translatePage();
   paths = await api.getPaths();
   await syncMain();
   detectFonts();

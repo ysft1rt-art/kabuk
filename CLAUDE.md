@@ -94,3 +94,15 @@ varsayılan açık; `fun.js` `TIPS` listesi kabuk türüne göre: powershell / c
 Yazmaya başlayınca gizlenir; ilk gerçek komut kabuğa gidince o panelde bir daha çıkmaz (`everTyped`).
 Eğlence kelimeleri, yazıp silmek ve boş Enter önerileri kapatmaz. Eğlence modu da açıksa eğlence ipucu önerilerin bir
 alt satırında sabit durur ve ilk gerçek komuttan sonra o da gizlenir; eğlence kelimeleri yine çalışır (`updateHint`).
+
+## Dil desteği (Türkçe / English)
+
+`renderer/i18n.js`. Metinler kodda ve index.html'de **Türkçe** yazılır; İngilizcesi aynı dosyadaki `EN` sözlüğündedir
+(anahtar = Türkçe metin). Kodda `t('Yeni sekme')`, değişkenli `t('{n} terminal açık', { n })`. Çevirisi olmayabilecek
+yazılar (kabuk adları, programların koyduğu başlıklar) için `tq()`. index.html'deki sabit yazılar `translatePage()`
+ile kendiliğinden çevrilir; içinde `<b>` olan paragraflara `data-i18n-html` eklenir. Kodun doldurduğu kutular
+`I18N_SKIP` listesindedir. `data-tip` Türkçe yazılır, ipucu gösterilirken çevrilir (ui.js).
+Ayar `settings.lang` (boşsa Windows'un dili); dil değişince `applyLanguage()` her şeyi yeniden çizer, ana sürece de
+gider (main.js `mt()`: klasör seçme pencereleri ve uyarılar). Yeni yazı = Türkçesini `t()` ile yaz + `EN`'e İngilizcesini ekle.
+Değişken adı olarak `t` kullanma: çeviri fonksiyonunu gölgeler.
+Kontrol: İngilizce açıkken `i18nMissing()` çevirisi eksik metinleri listeler.
