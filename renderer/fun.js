@@ -15,6 +15,59 @@ function funScene(text) {
 }
 const FUN_HINT = '✨ eğlence için yaz: kedi · köpek · kuş · balık · kar · fişek · kalp';
 
+// Yeni açılan terminalde, henüz bir şey yazılmamışken boş satırda sırayla akan komut önerileri
+const TIPS = {
+  powershell: [
+    ['claude', "Claude Code'u başlatır"],
+    ['ls', 'bu klasördeki dosyaları listeler'],
+    ['cd ..', 'bir üst klasöre çıkar'],
+    ['cd Desktop', 'Masaüstüne gider'],
+    ['explorer .', "bu klasörü Dosya Gezgini'nde açar"],
+    ['code .', "bu klasörü VS Code'da açar"],
+    ['cls', 'ekranı temizler'],
+    ['mkdir yeni-klasor', 'yeni bir klasör oluşturur'],
+    ['notepad notlar.txt', "dosyayı Not Defteri'nde açar"],
+    ['git status', "Git'te nelerin değiştiğini gösterir"],
+    ['winget upgrade', 'güncellenebilecek programları listeler'],
+    ['ipconfig', 'ağ bilgilerini gösterir'],
+    ['ping google.com', 'internet bağlantısını dener'],
+    ['Get-Process', 'çalışan programları listeler'],
+    ['history', 'daha önce yazdığın komutları gösterir'],
+  ],
+  cmd: [
+    ['claude', "Claude Code'u başlatır"],
+    ['dir', 'bu klasördeki dosyaları listeler'],
+    ['cd ..', 'bir üst klasöre çıkar'],
+    ['cd Desktop', 'Masaüstüne gider'],
+    ['explorer .', "bu klasörü Dosya Gezgini'nde açar"],
+    ['code .', "bu klasörü VS Code'da açar"],
+    ['cls', 'ekranı temizler'],
+    ['mkdir yeni-klasor', 'yeni bir klasör oluşturur'],
+    ['notepad notlar.txt', "dosyayı Not Defteri'nde açar"],
+    ['git status', "Git'te nelerin değiştiğini gösterir"],
+    ['winget upgrade', 'güncellenebilecek programları listeler'],
+    ['ipconfig', 'ağ bilgilerini gösterir'],
+    ['ping google.com', 'internet bağlantısını dener'],
+    ['tasklist', 'çalışan programları listeler'],
+  ],
+  bash: [
+    ['claude', "Claude Code'u başlatır"],
+    ['ls -la', 'bu klasördeki her şeyi listeler'],
+    ['cd ..', 'bir üst klasöre çıkar'],
+    ['pwd', 'hangi klasörde olduğunu gösterir'],
+    ['explorer .', "bu klasörü Dosya Gezgini'nde açar"],
+    ['code .', "bu klasörü VS Code'da açar"],
+    ['clear', 'ekranı temizler'],
+    ['mkdir yeni-klasor', 'yeni bir klasör oluşturur'],
+    ['cat notlar.txt', 'dosyanın içini ekrana yazar'],
+    ['git status', "Git'te nelerin değiştiğini gösterir"],
+    ['git log --oneline', 'son kayıtları (commit) listeler'],
+    ['ping google.com', 'internet bağlantısını dener'],
+    ['history', 'daha önce yazdığın komutları gösterir'],
+  ],
+};
+const TIP_EVERY = 1700; // ms: bir öneri ne kadar ekranda kalır
+
 // Boş komut satırı: PowerShell (PS C:\...>), cmd (C:\...>), bash ($ / #)
 const PROMPT_RE = /^(PS [^>]*>|[A-Za-z]:\\[^>]*>|.*[$#])$/;
 
@@ -30,7 +83,13 @@ class FunLayer {
     this.hint.className = 'fun-hint';
     this.hint.textContent = FUN_HINT;
     this.hint.hidden = true;
-    host.append(this.canvas, this.hint);
+    this.tips = document.createElement('div');
+    this.tips.className = 'cmd-tips';
+    this.tips.hidden = true;
+    this.tipList = null;
+    this.tipQueue = [];
+    this.tipTimer = null;
+    host.append(this.canvas, this.hint, this.tips);
     this.ctx = this.canvas.getContext('2d');
     this.sprites = [];
     this.running = false;
@@ -117,17 +176,67 @@ class FunLayer {
 
   // ---------- Boş satır ipucu ----------
   showHint(x, y, cellH, font, maxW) {
-    const st = this.hint.style;
-    st.left = x + 'px';
-    st.top = y + 'px';
-    st.height = cellH + 'px';
-    st.lineHeight = cellH + 'px';
-    st.font = font;
-    st.maxWidth = Math.max(0, maxW) + 'px';
+    place(this.hint, x, y, cellH, font);
+    this.hint.style.maxWidth = Math.max(0, maxW) + 'px';
     this.hint.hidden = maxW < 60;
   }
 
-  hideHint() { this.hint.hidden = true; }
+  hideHint() {
+    this.hint.hidden = true;
+    this.hideTips();
+  }
+
+  // ---------- Akan komut önerileri ----------
+  showTips(kind, x, y, cellH, font, maxW) {
+    place(this.tips, x, y, cellH, font);
+    this.tips.style.width = Math.max(0, maxW) + 'px';
+    if (maxW < 60) { this.hideTips(); return; }
+    const list = TIPS[kind] || TIPS.powershell;
+    if (list !== this.tipList) { this.tipList = list; this.tipQueue = []; this.tips.replaceChildren(); }
+    this.tips.hidden = false;
+    if (!this.tipTimer) {
+      if (!this.tips.firstChild) this.nextTip();
+      this.tipTimer = setInterval(() => this.nextTip(), TIP_EVERY);
+    }
+  }
+
+  hideTips() {
+    this.tips.hidden = true;
+    clearInterval(this.tipTimer);
+    this.tipTimer = null;
+  }
+
+  // Eskisi yukarı kayıp kaybolur, yenisi aşağıdan gelir. Liste karışık sırayla, tekrarsız döner
+  nextTip() {
+    if (!this.tipQueue.length) this.tipQueue = shuffle([...this.tipList]);
+    const [cmd, desc] = this.tipQueue.pop();
+    const el = document.createElement('div');
+    el.className = 'cmd-tip';
+    const c = document.createElement('span');
+    c.className = 'cmd-tip-cmd';
+    c.textContent = cmd;
+    el.append('💡 dene: ', c, '  · ' + desc);
+    const old = this.tips.querySelectorAll('.cmd-tip:not(.out)');
+    old.forEach((o) => { o.classList.add('out'); setTimeout(() => o.remove(), 400); });
+    this.tips.append(el);
+  }
+}
+
+function place(el, x, y, cellH, font) {
+  const st = el.style;
+  st.left = x + 'px';
+  st.top = y + 'px';
+  st.height = cellH + 'px';
+  st.lineHeight = cellH + 'px';
+  st.font = font;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 // ---------- Sahneler ----------

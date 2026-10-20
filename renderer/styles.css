@@ -283,6 +283,29 @@ body { display: flex; flex-direction: column; }
 .fun-hint[hidden] { display: none; }
 @keyframes hint-in { from { opacity: 0; } to { opacity: .75; } }
 
+/* Yeni terminalde boş satırda akan komut önerileri (fun.js showTips) */
+.cmd-tips {
+  position: absolute;
+  z-index: 9;
+  pointer-events: none;
+  overflow: hidden;
+  color: var(--dim);
+  opacity: .75;
+}
+.cmd-tips[hidden] { display: none; }
+.cmd-tip {
+  position: absolute;
+  inset: 0;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: tip-in .35s ease both;
+}
+.cmd-tip.out { animation: tip-out .35s ease both; }
+.cmd-tip-cmd { color: var(--accent); }
+@keyframes tip-in { from { opacity: 0; transform: translateY(80%); } to { opacity: 1; transform: none; } }
+@keyframes tip-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-80%); } }
+
 /* xterm'in kendi siyah katmanını ve Windows'un eski kaydırma çubuğunu kaldır
    (buzlu cam bu yüzden simsiyah görünüyordu) */
 .xterm .xterm-viewport {

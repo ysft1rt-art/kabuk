@@ -85,3 +85,10 @@ Varsayılan kapalı (`settings.fun`). Açıkken boş komut satırına `kedi`, `k
 oynar (`renderer/fun.js`). Karar Enter anında ekrana bakılarak verilir (`tryFun`): satır "komut istemi + kelime"
 değilse Enter kabuğa normal gider. Alt satıra taşan uzun istemler birleştirilir (`lineBeforeCursor`). Kelimeler
 büyük/küçük harf ve Türkçe harf farkı gözetmeden eşleşir (`funScene`).
+
+## Komut önerileri
+
+Yeni açılan panelde, henüz bir şey yazılmamışken boş komut satırında soluk örnek komutlar akar (`settings.tips`,
+varsayılan açık; `fun.js` `TIPS` listesi kabuk türüne göre: powershell / cmd / bash, `shellKind` renderer.js).
+İlk harf yazılınca o panelde bir daha çıkmaz (`everTyped`). Eğlence modu da açıksa eğlence ipucu önerilerin bir
+alt satırında sabit durur; öneriler bitince eskisi gibi komut satırının yanına geçer (`updateHint`).

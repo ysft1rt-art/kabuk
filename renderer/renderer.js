@@ -13,6 +13,7 @@ const DEFAULTS = {
   glass: 0.8,          // buzlu camın renk yoğunluğu (0.5 = çok saydam, 0.95 = neredeyse düz)
   pureBlack: true,
   fun: false,          // boş satırda ipucu + animasyonlar (varsayılan kapalı)
+  tips: true,          // yeni terminalde boş satırda akan komut önerileri
   fontSize: 13,
   fontFamily: 'JetBrains Mono Variable',
   fontWeight: 300,
@@ -229,6 +230,7 @@ function renderAppearance() {
   ui.pureBlack.setChecked(settings.pureBlack);
   ui.acrylic.setChecked(settings.acrylic);
   ui.fun.setChecked(settings.fun);
+  ui.tips.setChecked(settings.tips);
   $('glassRow').hidden = !settings.acrylic;
   ui.glass.setValue(settings.glass);
 }
@@ -284,6 +286,7 @@ class Pane {
     this.typed = '';
     this.typedOk = true;   // false: ok tuşu vb. yüzünden satırı artık doğru takip edemiyoruz
     this.held = null;      // Enter tutulurken gelen tuşlar
+    this.everTyped = false; // ilk harf yazılınca komut önerileri bu panelde bir daha çıkmaz
 
     this.term.attachCustomKeyEventHandler((e) => this.handleKey(e));
     this.term.onData((d) => this.onInput(d));
@@ -397,8 +400,9 @@ class Pane {
     // Kaçış dizileri: ok tuşları veya terminalin Windows'a verdiği otomatik cevaplar.
     // Satır boşken yok say; doluyken satırı artık güvenle takip edemeyiz
     if (d.startsWith('\x1b')) { if (this.typed) this.typedOk = false; return false; }
-    if (/[\r\n]/.test(d)) { this.typedOk = false; this.typed += ' '; return false; }
+    if (/[\r\n]/.test(d)) { this.typedOk = false; this.typed += ' '; this.everTyped = true; return false; }
     this.typed += d;
+    this.everTyped = true;
     return false;
   }
 
@@ -465,17 +469,30 @@ class Pane {
     this._hintTimer = setTimeout(() => this.updateHint(), 150);
   }
 
+  // Boş komut satırında soluk yazılar: henüz hiçbir şey yazılmamış terminalde akan komut önerileri,
+  // eğlence modu açıksa eğlence ipucu (öneriler varken onların hemen altında sabit durur)
   updateHint() {
     const b = this.term.buffer.active;
-    const show = settings.fun && this.tab?.activePane === this && this.typed === '' &&
+    const atPrompt = this.tab?.activePane === this && this.typed === '' && !this.held &&
       b.viewportY === b.baseY && this.atEmptyPrompt();
+    const tips = atPrompt && settings.tips && !this.everTyped;
+    const fun = atPrompt && settings.fun;
     const screen = this.host.querySelector('.xterm-screen');
-    if (!show || !screen) { this.fx.hideHint(); return; }
+    if (!(tips || fun) || !screen) { this.fx.hideHint(); return; }
     const cw = screen.clientWidth / this.term.cols;
     const ch = screen.clientHeight / this.term.rows;
     const x = screen.offsetLeft + (b.cursorX + 1) * cw;
     const y = screen.offsetTop + b.cursorY * ch;
-    this.fx.showHint(x, y, ch, `italic ${settings.fontWeight} ${settings.fontSize}px ${fontStack()}`, this.host.clientWidth - x - 36);
+    const font = `italic ${settings.fontWeight} ${settings.fontSize}px ${fontStack()}`;
+    const maxW = this.host.clientWidth - x - 36;
+    if (tips) {
+      this.fx.showTips(shellKind(this), x, y, ch, font, maxW);
+      if (fun && b.cursorY + 1 < this.term.rows) this.fx.showHint(x, y + ch, ch, font, maxW);
+      else this.fx.hint.hidden = true;
+    } else {
+      this.fx.hideTips();
+      this.fx.showHint(x, y, ch, font, maxW);
+    }
   }
 
   handleKey(e) {
@@ -735,6 +752,17 @@ function paneCwd(pane) {
     if (g) return bashToWindows(g[1]);
   }
   return null;
+}
+
+// Komut önerileri hangi kabuğun komutlarıyla gösterilsin
+function shellKind(pane) {
+  const id = pane.shellId;
+  if (id === 'cmd') return 'cmd';
+  if (id === 'gitbash') return 'bash';
+  const file = (settings.customShells.find((c) => c.id === id)?.file || '').toLowerCase();
+  if (/(^|[\\/])cmd(\.exe)?$/.test(file)) return 'cmd';
+  if (/(bash|wsl|zsh|sh)(\.exe)?$/.test(file)) return 'bash';
+  return 'powershell';
 }
 
 function bashToWindows(p) {
@@ -1211,6 +1239,7 @@ const ui = {
   pureBlack: KUI.toggle($('setPureBlack'), (on) => { settings.pureBlack = on; saveSettings(); applyTheme(); }),
   acrylic: KUI.toggle($('setAcrylic'), (on) => { settings.acrylic = on; saveSettings(); applyTheme(); }),
   fun: KUI.toggle($('setFun'), (on) => { settings.fun = on; saveSettings(); forEachPane((p) => p.hintSoon()); }),
+  tips: KUI.toggle($('setTips'), (on) => { settings.tips = on; saveSettings(); forEachPane((p) => p.hintSoon()); }),
   splitSameDir: KUI.toggle($('setSplitSameDir'), (on) => changeSetting('splitSameDir', on)),
   confirmClose: KUI.toggle($('setConfirmClose'), (on) => changeSetting('confirmClose', on)),
   cursorBlink: KUI.toggle($('setCursorBlink'), (on) => changeSetting('cursorBlink', on)),
