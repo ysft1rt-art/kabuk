@@ -8,8 +8,9 @@
 //     Paket "CN=Kabuk" ile imzalı; Windows'un bu imzaya güvenmesi için KabukMenu.cer bir kez
 //     LocalMachine\TrustedPeople'a eklenmeli. Bunu kullanıcı Ayarlar'daki düğmeyle yapar (yönetici onayı, trust()).
 //     Güven varsa paket bu kullanıcı için yönetici gerekmeden kurulur.
-//  2) Eski menü ("Diğer seçenekleri göster"): HKCU kayıt defteri girdileri. Her zaman yazılır (kısa menü
-//     kuruluyken de orada dursun). Bulunan araçlar her eşitlemede yeniden yazılır.
+//  2) Eski menü ("Diğer seçenekleri göster"): HKCU kayıt defteri girdileri. Yalnızca kısa menü yokken
+//     yazılır: kısa menüdeki eklenti "Diğer seçenekler"de zaten kendiliğinden görünür, ikisi birden olunca
+//     orada iki kez çıkıyor. Bulunan araçlar her eşitlemede yeniden yazılır.
 // Hepsi yalnızca bu kullanıcı için; menü kapatılınca paket ve girdiler silinir (sertifika güveni kalır,
 // gizli anahtarı olmadığı için zararsız).
 
@@ -145,7 +146,10 @@ try {
     }
     if (ok) {
       ctx.writeState({ menuInstalled: key });
-      await powershell(classicScript(ctx, true, clis));   // "Diğer seçenekleri göster" altında da dursun
+      // Windows kısa menüdeki eklentiyi "Diğer seçenekleri göster" altına da kendisi koyar;
+      // eski girdiler kalırsa orada iki "Kabuk ile aç" görünür. O yüzden silinir
+      const rm = await powershell(classicScript(ctx, false));
+      if (!rm.ok) return { state: 'modern', clis: names, error: rm.err };
       return { state: 'modern', clis: names };
     }
     ctx.writeState({ menuInstalled: null });

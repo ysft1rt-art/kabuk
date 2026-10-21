@@ -66,7 +66,8 @@ hem Kabuk bu dosyayı okur. Yeni araç = bir satır.
   ekle"** düğmesine basar (`menu.trust()`: UAC ile `LocalMachine\TrustedPeople`'a ekler). Bunu Claude yapmaz/test
   etmez: güvenlik ayarı, kullanıcının onayı.
 - **Eski menü:** HKCU `Directory\shell`, `Directory\Background\shell`, `Drive\shell` altına kayıt defteri girdileri
-  ("Diğer seçenekleri göster"). Kullanıcı isteği: kısa menü kuruluyken de **her zaman** yazılır (ikisinde birden olsun).
+  ("Diğer seçenekleri göster"). Yalnızca kısa menü yokken yazılır. Kısa menü kuruluyken silinir: Windows paketli
+  eklentiyi "Diğer seçenekler"e de kendisi koyuyor, ikisi birden olunca orada iki "Kabuk ile aç" çıkıyor (denendi).
 - `contextmenu/menu.js` kurulum/kaldırma/durum (Electron'suz, doğrudan test edilebilir); main.js açılışta ve ayar
   değişince `settings.contextMenu`'ye göre eşitler (HEADLESS'ta hiç dokunmaz).
 - Tıklayınca: `electron.exe "<kabuk>" [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"`. Kabuk tek kopya çalışır
