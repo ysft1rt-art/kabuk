@@ -13,6 +13,7 @@ const DEFAULTS = {
   acrylic: true,       // buzlu cam
   glass: 0.8,          // buzlu camın renk yoğunluğu (0.5 = çok saydam, 0.95 = neredeyse düz)
   pureBlack: true,
+  animations: true,    // arayüz animasyonları (kapalıyken body.no-anim: her şey anında)
   fun: true,           // boş satırda ipucu + animasyonlar
   tips: true,          // yeni terminalde boş satırda akan komut önerileri
   fontSize: 13,
@@ -196,6 +197,11 @@ function termTheme() {
   return tt;
 }
 
+// Ayarlar > Animasyonlar: kapalıyken CSS animasyonları anında biter (styles.css body.no-anim), animate() beklemez
+function applyAnimations() {
+  document.body.classList.toggle('no-anim', !settings.animations);
+}
+
 function applyTheme() {
   const th = resolveTheme();
   const ui = uiColors();
@@ -270,6 +276,7 @@ function renderAppearance() {
   setSegmented('setLang', settings.lang);
   ui.pureBlack.setChecked(settings.pureBlack);
   ui.acrylic.setChecked(settings.acrylic);
+  ui.animations.setChecked(settings.animations);
   ui.fun.setChecked(settings.fun);
   ui.tips.setChecked(settings.tips);
   $('glassRow').hidden = !settings.acrylic;
@@ -708,6 +715,7 @@ function replaceNode(oldNode, newNode) {
 // Animasyon hiç oynamazsa (öğe gizliyse) en geç max ms sonra yine biter.
 // Terminal içeren öğelerde yalnızca kaydırma + saydamlık kullan: büyütme (scale) xterm'in harf ölçüsünü bozar
 function animate(el, cls, done, max = 450) {
+  if (!settings.animations) { el.classList.remove(cls); done?.(); return; }
   el.classList.remove(cls);
   void el.offsetWidth;   // aynı sınıf yeniden eklenince animasyon baştan oynasın
   el.classList.add(cls);
@@ -1508,7 +1516,7 @@ function hidePopover(p) {
   if (!popoverOpen(p)) return false;
   p.classList.remove('pop-in');
   p.classList.add('pop-out');
-  p._hideTimer = setTimeout(() => { p.classList.remove('pop-out'); p.classList.add('hidden'); }, POP_OUT_MS);
+  p._hideTimer = setTimeout(() => { p.classList.remove('pop-out'); p.classList.add('hidden'); }, settings.animations ? POP_OUT_MS : 0);
   return true;
 }
 
@@ -1666,6 +1674,7 @@ const ui = {
   }),
   pureBlack: KUI.toggle($('setPureBlack'), (on) => { settings.pureBlack = on; saveSettings(); applyTheme(); }),
   acrylic: KUI.toggle($('setAcrylic'), (on) => { settings.acrylic = on; saveSettings(); applyTheme(); }),
+  animations: KUI.toggle($('setAnimations'), (on) => { settings.animations = on; saveSettings(); applyAnimations(); }),
   fun: KUI.toggle($('setFun'), (on) => { settings.fun = on; saveSettings(); forEachPane((p) => p.hintSoon()); }),
   tips: KUI.toggle($('setTips'), (on) => { settings.tips = on; saveSettings(); forEachPane((p) => p.hintSoon()); }),
   splitSameDir: KUI.toggle($('setSplitSameDir'), (on) => changeSetting('splitSameDir', on)),
@@ -1925,6 +1934,7 @@ $('resetSettings').onclick = async () => {
     cursorStyle: settings.cursorStyle, cursorBlink: settings.cursorBlink,
     lineHeight: settings.lineHeight, scrollback: settings.scrollback,
   }));
+  applyAnimations();
   applyTheme();
   rebuildKeys();
   await applyFont();
@@ -2119,6 +2129,7 @@ api.onConfirmClose(async (count) => {
   translatePage();
   // Tema, ana süreçten bir şey beklemeden ilk çizimden önce uygulanır (pencere ilk çizimde görünür;
   // yoksa bir an varsayılan renklerle görünüyordu)
+  applyAnimations();
   applyTheme();
   rebuildKeys();
   checkFontFamily();

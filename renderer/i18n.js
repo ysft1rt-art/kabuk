@@ -206,6 +206,8 @@ const EN = {
   'Pencerenin arkası bulanık ve yarı saydam görünür.': 'The window background looks blurred and translucent.',
   'Cam yoğunluğu': 'Glass opacity',
   'Azaldıkça arkadaki pencereler daha çok görünür.': 'Lower values show more of the windows behind.',
+  'Animasyonlar': 'Animations',
+  'Sekme, panel ve menüler açılıp kapanırken kayarak hareket eder. Kapalıyken her şey anında olur.': 'Tabs, panes and menus slide in and out. When off, everything happens instantly.',
   'Eğlence modu': 'Fun mode',
   'Boş satırda ipuçları ve gizli kelimelerle küçük animasyonlar.': 'Hints on the empty line and small animations triggered by secret words.',
   'Komut önerileri': 'Command suggestions',

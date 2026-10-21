@@ -1051,3 +1051,12 @@ img, svg, a, button { -webkit-user-drag: none; }
 .set-btn:disabled { opacity: .5; cursor: default; border-color: var(--border); background: var(--tab-active); }
 .update-hint { margin: 8px 4px 2px; font-size: 11px; color: var(--dim); }
 .update-hint[hidden], #updateStatus[hidden] { display: none; }
+
+/* Ayarlar > Animasyonlar kapalı: hareketler anında biter. Süre 0 değil 1 ms: animasyon olayları yine gelsin ve
+   "forwards" ile biten durumlar korunsun; sürekli yanıp sönenler (dikkat noktası vb.) sabit kalır */
+body.no-anim *, body.no-anim *::before, body.no-anim *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition: none !important;
+}

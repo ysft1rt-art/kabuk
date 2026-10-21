@@ -85,6 +85,8 @@ DOM'dan silinir), yeni sekme içeriği (`content-in`), yeni bölünen panel (`pa
 değişince genişlik `updateTabTitle` içinde yumuşakça kayar (açılış sürerken değil: `tab.opening`).
 Terminal içeren öğelerde yalnızca kaydırma + saydamlık: `scale` xterm'in harf ölçüsünü bozar.
 Panel genişliğini (flex) canlandırma: her karede kabuk yeniden boyutlanır.
+Ayarlar > Animasyonlar (`settings.animations`) kapalıyken `body.no-anim`: CSS animasyonları 1 ms'ye iner, geçişler kapanır,
+`animate()` beklemeden `done` çağırır. Yeni bir bekleme süresi (setTimeout) eklersen bu ayara bak.
 Açılır paneller (`.popover`: kabuk menüsü, gizli terminaller, kısayollar) `showPopover`/`hidePopover` ile açılıp
 kapanır (`pop-in`/`pop-out`); kapanış sürerken panel kapalı sayılır (`popoverOpen`). Doğrudan `hidden` sınıfı ekleme.
 
