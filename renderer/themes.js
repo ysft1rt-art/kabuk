@@ -58,25 +58,6 @@ window.KABUK_THEMES = {
       },
     },
   },
-  okyanus: {
-    name: 'Okyanus',
-    dark: {
-      ui: { bg: '#0f1c2e', bar: '#0b1524', tab: '#13243a', tabActive: '#0f1c2e', fg: '#d6e4f0', dim: '#5c7a99', accent: '#4fd1c5', border: '#1d3350' },
-      term: {
-        background: '#0f1c2e', foreground: '#d6e4f0', cursor: '#4fd1c5', cursorAccent: '#0f1c2e', selectionBackground: '#1f4068',
-        black: '#0b1524', red: '#ff6b81', green: '#5ee6a8', yellow: '#ffd479', blue: '#5aa9ff', magenta: '#c49bff', cyan: '#4fd1c5', white: '#c6d4e1',
-        brightBlack: '#3d5a7a', brightRed: '#ff8fa0', brightGreen: '#86f0c0', brightYellow: '#ffe09e', brightBlue: '#85c0ff', brightMagenta: '#d8b8ff', brightCyan: '#7ae5db', brightWhite: '#f0f6fb',
-      },
-    },
-    light: {
-      ui: { bg: '#f2f8fb', bar: '#e2eef4', tab: '#d5e6ef', tabActive: '#f2f8fb', fg: '#17324d', dim: '#6a8299', accent: '#0f8b8d', border: '#c7dbe6' },
-      term: {
-        background: '#f2f8fb', foreground: '#17324d', cursor: '#0f8b8d', cursorAccent: '#f2f8fb', selectionBackground: '#c3e3ea',
-        black: '#17324d', red: '#d1344f', green: '#1f8a5b', yellow: '#a8740a', blue: '#1f6fd1', magenta: '#8e4fd6', cyan: '#0f8b8d', white: '#6a8299',
-        brightBlack: '#466079', brightRed: '#e04c66', brightGreen: '#25a26b', brightYellow: '#c08711', brightBlue: '#3a86e6', brightMagenta: '#a066e3', brightCyan: '#13a3a5', brightWhite: '#2f4a66',
-      },
-    },
-  },
   matrix: {
     name: 'Matrix',
     dark: {
@@ -163,65 +144,42 @@ window.KABUK_THEMES = {
     return { ui, term };
   }
 
-  const add = (key, name, dark, light) => {
-    window.KABUK_THEMES[key] = { name, group: 'Bilinen temalar', dark: build(false, dark), light: build(true, light) };
+  const add = (key, name, dark, light, group = 'Bilinen temalar') => {
+    window.KABUK_THEMES[key] = { name, group, dark: build(false, dark), light: build(true, light) };
   };
+  // Kabuk'un kendi temaları (listede "Kabuk temaları" altında, adları çevrilir)
+  const own = (key, name, dark, light) => add(key, name, dark, light, null);
 
-  add('ayu', 'Ayu',
-    ['#1f2430', '#cccac2', '#33415e', '#ffcc66', ['#171b24', '#ed8274', '#87d96c', '#facc6e', '#6dcbfa', '#dabafa', '#90e1c6', '#c7c7c7'], ['#686868', '#f28779', '#d5ff80', '#ffd173', '#73d0ff', '#dfbfff', '#95e6cb', '#ffffff']],
-    ['#fcfcfc', '#5c6166', '#d3e3f3', '#fa8d3e', ['#5c6166', '#e65050', '#6f9400', '#c98a1e', '#399ee6', '#a37acc', '#3fa98a', '#8a9199']]);
+  own('kehribar', 'Kehribar', // eski kehribar ekranlı monitör
+    ['#140c02', '#ffb000', '#4a3000', '#ffb000', ['#2a1a00', '#ff7a1a', '#e8d040', '#ffd966', '#e6a000', '#ff9a40', '#ffc04d', '#ffd38a'], ['#6b4a10', '#ff9a4d', '#f2e070', '#ffe699', '#ffbb33', '#ffb370', '#ffd480', '#fff0d0']],
+    ['#fdf6e8', '#7a4a00', '#f3ddb0', '#c77700', ['#4a2c00', '#b84a00', '#6f7a00', '#a06800', '#c77700', '#a8501a', '#8f6a1f', '#9a7a50']]);
+  own('neon', 'Neon', // gece kulübü: koyu mor zemin, pembe ve camgöbeği
+    ['#13091f', '#f2e8ff', '#3d1f5c', '#ff2fa8', ['#241338', '#ff3d7f', '#3dffb0', '#ffe94d', '#36c9ff', '#ff2fa8', '#2ff3e0', '#e0d0f5'], ['#5a3d7a', '#ff6e9e', '#7affc9', '#fff27a', '#6fd8ff', '#ff66c4', '#6ff7ea', '#ffffff']],
+    ['#fbf5ff', '#2a1440', '#f0d4f7', '#d4147f', ['#2a1440', '#d4143f', '#0a8f5a', '#9a7a00', '#0a76c4', '#c2147a', '#0a8f8a', '#7a6a90']]);
+  own('murekkep', 'Mürekkep', // neredeyse renksiz: gri tonlar + tek kırmızı vurgu
+    ['#111111', '#d4d4d4', '#333333', '#e5484d', ['#262626', '#e5484d', '#a3c2a3', '#e0d6b8', '#9eaabd', '#c4b4c4', '#adbdbd', '#d4d4d4'], ['#5c5c5c', '#ff6b6f', '#bdd6bd', '#f0e8cc', '#b8c2d4', '#d8cad8', '#c6d4d4', '#ffffff']],
+    ['#f7f5f0', '#1a1a1a', '#dedad0', '#c4252b', ['#1a1a1a', '#c4252b', '#3f6b3f', '#7a6420', '#3a4f70', '#6a4a6a', '#3f6464', '#6e6e6e']]);
+  own('lav', 'Lav', // sıcak: koyu kızıl zemin, turuncu vurgu
+    ['#1a0d0b', '#f2dcd2', '#4a1f17', '#ff5a2e', ['#2b1612', '#ff4f3a', '#b8d26a', '#ffb02e', '#7fa6d6', '#ff6f8f', '#f2a07a', '#e6cfc4']],
+    ['#fff5f0', '#4a1a10', '#fbd3c4', '#d9381e', ['#4a1a10', '#c62a12', '#5f7a12', '#a85e00', '#2f5f9a', '#b8285a', '#a8501f', '#8a6a60']]);
+
+
   add('catppuccin', 'Catppuccin',
     ['#1e1e2e', '#cdd6f4', '#45475a', '#cba6f7', ['#45475a', '#f38ba8', '#a6e3a1', '#f9e2af', '#89b4fa', '#f5c2e7', '#94e2d5', '#bac2de'], ['#585b70', '#f38ba8', '#a6e3a1', '#f9e2af', '#89b4fa', '#f5c2e7', '#94e2d5', '#a6adc8']],
     ['#eff1f5', '#4c4f69', '#ccd0da', '#8839ef', ['#5c5f77', '#d20f39', '#40a02b', '#c47a12', '#1e66f5', '#ea76cb', '#179299', '#6c6f85']]);
   add('everforest', 'Everforest',
     ['#2d353b', '#d3c6aa', '#475258', '#a7c080', ['#475258', '#e67e80', '#a7c080', '#dbbc7f', '#7fbbb3', '#d699b6', '#83c092', '#d3c6aa'], ['#859289', '#f09294', '#b8cf92', '#e5c992', '#93c9c1', '#e2aec6', '#97cea6', '#e9e0cb']],
     ['#fdf6e3', '#5c6a72', '#e6e2cc', '#8da101', ['#5c6a72', '#f85552', '#8da101', '#c08a00', '#3a94c5', '#df69ba', '#35a77c', '#939f91']]);
-  add('flexoki', 'Flexoki',
-    ['#100f0f', '#cecdc3', '#343331', '#da702c', ['#282726', '#d14d41', '#879a39', '#d0a215', '#4385be', '#ce5d97', '#3aa99f', '#cecdc3'], ['#575653', '#e8705f', '#a0af54', '#e8c33f', '#66a0c8', '#e47da8', '#5abdac', '#f2f0e5']],
-    ['#fffcf0', '#100f0f', '#e6e4d9', '#bc5215', ['#100f0f', '#af3029', '#66800b', '#ad8301', '#205ea6', '#a02f6f', '#24837b', '#6f6e69']]);
-  add('github', 'GitHub',
-    ['#0d1117', '#e6edf3', '#264f78', '#58a6ff', ['#484f58', '#ff7b72', '#3fb950', '#d29922', '#58a6ff', '#bc8cff', '#39c5cf', '#b1bac4'], ['#6e7681', '#ffa198', '#56d364', '#e3b341', '#79c0ff', '#d2a8ff', '#56d4dd', '#ffffff']],
-    ['#ffffff', '#1f2328', '#cfe3fb', '#0969da', ['#24292f', '#cf222e', '#116329', '#7d4e00', '#0969da', '#8250df', '#1b7c83', '#6e7781'], ['#57606a', '#a40e26', '#1a7f37', '#633c01', '#218bff', '#a475f9', '#3192aa', '#8c959f']]);
-  add('horizon', 'Horizon',
-    ['#1c1e26', '#d5d8da', '#2e303e', '#e95678', ['#16161c', '#e95678', '#29d398', '#fab795', '#26bbd9', '#ee64ac', '#59e1e3', '#d5d8da'], ['#6c6f93', '#ec6a88', '#3fdaa4', '#fbc3a7', '#3fc4de', '#f075b5', '#6be4e6', '#ffffff']],
-    ['#fdf0ed', '#2e303e', '#f9cbbe', '#e95378', ['#16161c', '#e95378', '#14a06b', '#d9541a', '#1d8bb0', '#d6338c', '#1f9fa0', '#6c6f93']]);
-  add('iceberg', 'Iceberg',
-    ['#161821', '#c6c8d1', '#272c42', '#84a0c6', ['#1e2132', '#e27878', '#b4be82', '#e2a478', '#84a0c6', '#a093c7', '#89b8c2', '#c6c8d1'], ['#6b7089', '#e98989', '#c0ca8e', '#e9b189', '#91acd1', '#ada0d3', '#95c4ce', '#d2d4de']],
-    ['#e8e9ec', '#33374c', '#c9cdd7', '#2d539e', ['#33374c', '#cc517a', '#668e3d', '#c57339', '#2d539e', '#7759b4', '#3f83a6', '#6b7089']]);
   add('kanagawa', 'Kanagawa',
     ['#1f1f28', '#dcd7ba', '#2d4f67', '#7e9cd8', ['#16161d', '#c34043', '#76946a', '#c0a36e', '#7e9cd8', '#957fb8', '#6a9589', '#c8c093'], ['#727169', '#e82424', '#98bb6c', '#e6c384', '#7fb4ca', '#938aa9', '#7aa89f', '#dcd7ba']],
     ['#f2ecbc', '#545464', '#c9cbd1', '#4d699b', ['#1f1f28', '#c84053', '#6f894e', '#77713f', '#4d699b', '#b35b79', '#597b75', '#8a8980']]);
   add('monokai', 'Monokai Pro',
     ['#2d2a2e', '#fcfcfa', '#5b595c', '#ffd866', ['#403e41', '#ff6188', '#a9dc76', '#ffd866', '#fc9867', '#ab9df2', '#78dce8', '#fcfcfa'], ['#727072', '#ff7a9b', '#bce58f', '#ffe085', '#fdab84', '#beb3f5', '#93e4ed', '#ffffff']],
     ['#f8efe7', '#2c232e', '#d2c9c4', '#b16803', ['#2c232e', '#ce4770', '#218871', '#b16803', '#e16032', '#6851a2', '#2473b6', '#72696d']]);
-  add('nightfox', 'Nightfox',
-    ['#192330', '#cdcecf', '#2b3b51', '#719cd6', ['#393b44', '#c94f6d', '#81b29a', '#dbc074', '#719cd6', '#9d79d6', '#63cdcf', '#dfdfe0'], ['#575860', '#d16983', '#8ebaa4', '#e0c989', '#86abdc', '#baa1e2', '#7ad5d6', '#e4e4e5']],
-    ['#f6f2ee', '#3d2b5a', '#e7d2be', '#2848a9', ['#352c24', '#a5222f', '#396847', '#ac5402', '#2848a9', '#6e33ce', '#287980', '#534c45']]);
-  add('nightowl', 'Night Owl',
-    ['#011627', '#d6deeb', '#1d3b53', '#82aaff', ['#1d3b53', '#ef5350', '#22da6e', '#addb67', '#82aaff', '#c792ea', '#21c7a8', '#d6deeb'], ['#5f7e97', '#ef5350', '#22da6e', '#ffeb95', '#82aaff', '#c792ea', '#7fdbca', '#ffffff']],
-    ['#fbfbfb', '#403f53', '#e0e0e0', '#288ed7', ['#403f53', '#de3d3b', '#08916a', '#b38a00', '#288ed7', '#d6438a', '#2aa298', '#7a8094']]);
   add('nord', 'Nord',
     ['#2e3440', '#d8dee9', '#434c5e', '#88c0d0', ['#3b4252', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#88c0d0', '#e5e9f0'], ['#4c566a', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#8fbcbb', '#eceff4']],
     ['#eceff4', '#2e3440', '#d8dee9', '#5e81ac', ['#3b4252', '#b5404a', '#4f7a35', '#9a6a00', '#5e81ac', '#8a5a85', '#2f7f8f', '#616e88']]);
-  add('one', 'One Dark / Light',
-    ['#282c34', '#abb2bf', '#3e4451', '#61afef', ['#3f4451', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#d7dae0'], ['#5c6370', '#e88388', '#a5e075', '#f0d197', '#7ec2ff', '#de8ff0', '#6bcfdb', '#ffffff']],
-    ['#fafafa', '#383a42', '#e5e5e6', '#4078f2', ['#383a42', '#e45649', '#50a14f', '#c18401', '#4078f2', '#a626a4', '#0184bc', '#696c77']]);
-  add('palenight', 'Palenight',
-    ['#292d3e', '#a6accd', '#3c435e', '#c792ea', ['#32374d', '#f07178', '#c3e88d', '#ffcb6b', '#82aaff', '#c792ea', '#89ddff', '#d0d0d0'], ['#676e95', '#ff8b92', '#ddffa7', '#ffe585', '#9cc4ff', '#e1acff', '#a3f7ff', '#ffffff']],
-    ['#fafafa', '#546e7a', '#cfe8e5', '#39adb5', ['#37474f', '#e53935', '#6c9a2f', '#c78417', '#6182b8', '#7c4dff', '#39adb5', '#78909c']]);
-  add('rosepine', 'Rosé Pine',
-    ['#191724', '#e0def4', '#403d52', '#c4a7e7', ['#26233a', '#eb6f92', '#31748f', '#f6c177', '#9ccfd8', '#c4a7e7', '#ebbcba', '#e0def4'], ['#6e6a86', '#eb6f92', '#3e8fb0', '#f6c177', '#9ccfd8', '#c4a7e7', '#ea9a97', '#ffffff']],
-    ['#faf4ed', '#575279', '#dfdad9', '#907aa9', ['#575279', '#b4637a', '#286983', '#c9852b', '#56949f', '#907aa9', '#d7827e', '#797593']]);
-  add('selenized', 'Selenized',
-    ['#103c48', '#adbcbc', '#184956', '#4695f7', ['#184956', '#fa5750', '#75b938', '#dbb32d', '#4695f7', '#f275be', '#41c7b9', '#72898f'], ['#2d5b69', '#ff665c', '#84c747', '#ebc13d', '#58a3ff', '#ff84cd', '#53d6c7', '#cad8d9']],
-    ['#fbf3db', '#53676d', '#ece3cc', '#0072d4', ['#53676d', '#d2212d', '#489100', '#ad8900', '#0072d4', '#ca4898', '#009c8f', '#73807f']]);
   add('solarized', 'Solarized',
     ['#002b36', '#93a1a1', '#073642', '#268bd2', ['#073642', '#dc322f', '#859900', '#b58900', '#268bd2', '#d33682', '#2aa198', '#eee8d5'], ['#657b83', '#cb4b16', '#9fb51a', '#d4a10a', '#4aa3e0', '#6c71c4', '#3fbfb3', '#fdf6e3']],
     ['#fdf6e3', '#586e75', '#eee8d5', '#268bd2', ['#073642', '#dc322f', '#859900', '#b58900', '#268bd2', '#d33682', '#2aa198', '#93a1a1'], ['#657b83', '#cb4b16', '#6f8000', '#9a7400', '#1f76b4', '#6c71c4', '#21877f', '#586e75']]);
-  add('tomorrow', 'Tomorrow',
-    ['#1d1f21', '#c5c8c6', '#373b41', '#81a2be', ['#282a2e', '#cc6666', '#b5bd68', '#f0c674', '#81a2be', '#b294bb', '#8abeb7', '#c5c8c6'], ['#969896', '#d54e53', '#b9ca4a', '#e7c547', '#7aa6da', '#c397d8', '#70c0b1', '#ffffff']],
-    ['#ffffff', '#4d4d4c', '#d6d6d6', '#4271ae', ['#4d4d4c', '#c82829', '#718c00', '#b58c00', '#4271ae', '#8959a8', '#3e999f', '#737373']]);
-  add('vitesse', 'Vitesse',
-    ['#121212', '#dbd7ca', '#2a2a2a', '#4d9375', ['#393a34', '#cb7676', '#4d9375', '#e6cc77', '#6394bf', '#d9739f', '#5eaab5', '#dbd7ca'], ['#777777', '#d99191', '#6aa98d', '#ecd796', '#82a9cc', '#e18fb2', '#7dbcc5', '#ffffff']],
-    ['#ffffff', '#393a34', '#e6e6e6', '#1e754f', ['#121212', '#ab5959', '#1e754f', '#a08a1e', '#296aa3', '#a13865', '#2993a3', '#6f706b']]);
 })();

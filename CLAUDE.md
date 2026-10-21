@@ -133,7 +133,11 @@ hem Kabuk bu dosyayı okur. Yeni araç = bir satır.
 
 `renderer/themes.js`. Her temanın koyu ve açık hali olmak zorunda (Koyu/Açık ayarı bütün temalarda geçerli).
 Yeni bilinen tema eklemek için alttaki `add(key, ad, [koyu], [açık])` yeterli; sekme/çubuk/kenar renkleri
-ve açık temada koyu tutulan "beyaz" otomatik türetilir. Temalar Ayarlar > Görünüm'deki açılır listeden seçilir.
+ve açık temada koyu tutulan "beyaz" otomatik türetilir; Kabuk'un kendi temaları için `own(...)` (adı i18n.js'e eklenir).
+Temalar Ayarlar > Görünüm'deki açılır listeden seçilir. Liste bilerek kısa tutuluyor (2026-10-21: 27 → 16): birbirine
+benzeyen tema ekleme. Kaldırılan bir temayı seçmiş kullanıcı `REMOVED_THEMES` (renderer.js) ile en yakın temaya geçer.
+
+Gömülü yazı tipleri `@fontsource-variable/*` paketleri: index.html'de `<link>` + renderer.js `BUNDLED_FONTS`.
 
 ## Çizim (WebGL)
 

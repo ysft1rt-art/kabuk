@@ -58,7 +58,13 @@ try {
   saved.v = DEFAULTS.v;
   Object.assign(settings, saved);
 } catch {}
-if (!THEMES[settings.theme]) settings.theme = DEFAULTS.theme;
+// Kaldırılan temalar en yakın kalan temaya geçer
+const REMOVED_THEMES = {
+  okyanus: 'gece', nightowl: 'gece', iceberg: 'nord', nightfox: 'nord', palenight: 'catppuccin', rosepine: 'catppuccin',
+  horizon: 'neon', one: 'kar', github: 'kar', tomorrow: 'murekkep', vitesse: 'murekkep', ayu: 'gunbatimi',
+  flexoki: 'gunbatimi', selenized: 'solarized',
+};
+if (!THEMES[settings.theme]) settings.theme = REMOVED_THEMES[settings.theme] || DEFAULTS.theme;
 const systemLang = () => ((navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en');
 if (!['tr', 'en'].includes(settings.lang)) settings.lang = systemLang();
 LANG = settings.lang;
@@ -90,11 +96,15 @@ const BUNDLED_FONTS = [
   { family: 'Geist Mono Variable', name: 'Geist Mono' },
   { family: 'Fira Code Variable', name: 'Fira Code' },
   { family: 'Source Code Pro Variable', name: 'Source Code Pro' },
+  { family: 'Victor Mono Variable', name: 'Victor Mono' },
+  { family: 'Martian Mono Variable', name: 'Martian Mono' },
+  { family: 'Red Hat Mono Variable', name: 'Red Hat Mono' },
+  { family: 'Ubuntu Sans Mono Variable', name: 'Ubuntu Sans Mono' },
 ];
 const SYSTEM_FONTS = [
   'Cascadia Mono', 'Cascadia Code', 'Consolas', 'Lucida Console', 'Courier New',
   'Hack', 'Iosevka', 'IBM Plex Mono', 'Roboto Mono', 'Ubuntu Mono', 'Inconsolata',
-  'Victor Mono', 'Fantasque Sans Mono', 'Comic Mono', 'CaskaydiaCove Nerd Font',
+  'Fantasque Sans Mono', 'Comic Mono', 'CaskaydiaCove Nerd Font',
   'JetBrainsMono Nerd Font', 'MesloLGS NF', 'Monaspace Neon', 'Commit Mono', 'Anthropic Sans',
 ];
 let FONTS = [...BUNDLED_FONTS];
