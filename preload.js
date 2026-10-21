@@ -26,4 +26,9 @@ contextBridge.exposeInMainWorld('kabuk', {
   getMenuStatus: () => ipcRenderer.invoke('menu:status'),
   onMenuStatus: (cb) => ipcRenderer.on('menu:status', (_e, s) => cb(s)),
   trustMenu: () => ipcRenderer.invoke('menu:trust'),
+  // Otomatik güncelleme (updater.js): durum, elle kontrol, "yeniden başlat ve güncelle"
+  getUpdateStatus: () => ipcRenderer.invoke('update:status'),
+  onUpdateStatus: (cb) => ipcRenderer.on('update:status', (_e, s) => cb(s)),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
 });

@@ -30,6 +30,11 @@
     </button>
     <div class="spacer"></div>
     <div class="tools">
+      <!-- Yeni sürüm bulununca görünür (updater.js): indirilirken ilerleme, hazır olunca "Güncelle" -->
+      <button id="updateBtn" class="update-chip" hidden>
+        <svg viewBox="0 0 16 16"><path d="M8 2.5v7.5M4.8 6.8L8 10l3.2-3.2M3.5 13h9"/></svg>
+        <span id="updateLabel"></span>
+      </button>
       <button id="splitRight" class="icon-btn" data-key-action="splitRight" data-tip-text="Sağa terminal aç">
         <svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M8 3v10"/></svg>
       </button>
@@ -63,6 +68,16 @@
     <button id="helpEditKeys" class="menu-item menu-sep">Kısayolları değiştir…</button>
   </div>
 
+  <div id="updatePanel" class="popover hidden">
+    <div class="popover-title">Güncelleme</div>
+    <div id="updateVer" class="update-ver"></div>
+    <div id="updateSub" class="update-sub"></div>
+    <div id="updateBar" class="update-bar"><div id="updateBarFill"></div></div>
+    <div id="updateNotes" class="update-notes"></div>
+    <button id="updateInstall" class="set-btn primary update-go">Yeniden başlat ve güncelle</button>
+    <div id="updateHint" class="update-hint">Şimdi istemezsen, Kabuk'u kapattığında kendiliğinden kurulur.</div>
+  </div>
+
   <!-- Ayarlar sekmesinin içeriği: sekme açılınca oraya taşınır -->
   <div id="settingsPage" class="settings" hidden>
     <nav class="set-nav">
@@ -87,6 +102,9 @@
       </button>
       <button data-sec="secShells">
         <svg viewBox="0 0 16 16"><path d="M8 2l6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Kabuklar
+      </button>
+      <button data-sec="secUpdate">
+        <svg viewBox="0 0 16 16"><path d="M13.2 6.5A5.3 5.3 0 0 0 3.3 5.2M2.8 9.5a5.3 5.3 0 0 0 9.9 1.3M3.3 2.6v2.6h2.6M12.7 13.4v-2.6h-2.6"/></svg>Güncellemeler
       </button>
     </nav>
 
@@ -403,6 +421,27 @@ notification_method = "osc9"</div></div>
                     <button id="addShell" class="set-btn primary">Ekle</button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="secUpdate">
+            <h2>Güncellemeler</h2>
+            <div class="set-card">
+              <div class="set-row">
+                <div class="set-label">
+                  <div id="updateVersion" class="set-name"></div>
+                  <div class="set-desc">Yeni sürümler Kabuk'un GitHub sayfasından indirilir.</div>
+                  <div id="updateStatus" class="set-desc menu-status"></div>
+                </div>
+                <button id="updateCheck" class="set-btn">Güncellemeleri denetle</button>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Otomatik denetle</div>
+                  <div class="set-desc">Kabuk açıkken birkaç saatte bir yeni sürüm var mı diye bakar. Bulursa arka planda indirir ve üst çubukta Güncelle düğmesi çıkar.</div>
+                </div>
+                <button id="setAutoUpdate" class="kswitch"></button>
               </div>
             </div>
           </section>

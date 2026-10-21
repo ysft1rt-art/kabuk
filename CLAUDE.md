@@ -9,6 +9,31 @@ Her değişiklik bittikten ve test edildikten sonra commit at; mesaj sade Türk�
 Bir işi yarım bırakıp commit atma, çalışmayan kodu commit'leme. `node_modules` commit'lenmez (`.gitignore`).
 Push'u kullanıcı isterse yap.
 
+## Kurulum dosyası ve otomatik güncelleme
+
+Kabuk iki şekilde çalışır: **geliştirme klasöründen** (`electron.exe .`, masaüstü kısayolu; Claude burada çalışır)
+ve **kurulum dosyasıyla kurulmuş** olarak (`Kabuk.exe`, `%LOCALAPPDATA%\Programs\kabuk`). Ayarlar klasörü ikisinde
+aynı (`%APPDATA%\Kabuk`). Kodda ayrım `app.isPackaged`; main.js'te `ROOT`/`asset()` Kabuk.exe'nin yanındaki
+dosyaları (simgeler, `contextmenu\`) gösterir, çünkü uygulamanın kendisi `resources\app.asar` paketinin içinde.
+
+- **Derleme:** `npm run dist` → `dist\Kabuk-Kurulum-<sürüm>.exe` (electron-builder, ayarlar package.json `build`).
+  Tek tıkla kurulur, yönetici izni istemez. `build/installer.nsh`: güncellemeden önce kilitli olabilecek
+  `KabukMenu.dll`'i kenara taşır (yoksa eski sürümün kaldırıcısı "File is busy" deyip güncellemeyi iptal ediyor;
+  denendi), Kabuk kaldırılınca `contextmenu\uninstall.ps1` ile yalnızca bu kuruluma ait sağ tık menüsünü siler.
+- **Yayınlama:** package.json'da `version`'ı artır, commit'le, `git tag v<sürüm>` + `git push origin main v<sürüm>`.
+  GitHub Actions (`.github/workflows/release.yml`) kurulum dosyasını derleyip Releases'e koyar. (Yerelde
+  `npm run release` de aynısını yapar ama `GH_TOKEN` ister.) Push/etiket yalnızca kullanıcı isteyince.
+- **Güncelleme:** `updater.js` (electron-updater, kaynak GitHub Releases). Açılıştan 30 sn sonra ve 4 saatte bir
+  bakar (`settings.autoUpdate`), bulursa arka planda indirir; üst çubukta `#updateBtn` çıkar (indirirken yüzde,
+  hazır olunca "Güncelle"), açılır paneli `#updatePanel`. "Yeniden başlat ve güncelle" → `quitAndInstall` (sessiz
+  kurulum, Kabuk kendiliğinden yeniden açılır). Basılmazsa Kabuk kapanırken kurulur. Ayarlar > Güncellemeler'de
+  elle denetleme. Geliştirme klasöründe durum `unsupported`.
+- **Test:** geliştirme klasöründe `KABUK_UPDATE_CONFIG=<yml>` (generic sağlayıcı, yerel sunucu) ile güncelleme akışı
+  denenebilir. Paketli uygulama `--user-data-dir=<geçici>` + `KABUK_HEADLESS=1` ile kullanıcının ayarlarına dokunmadan
+  çalışır. Gerçek kurulum/güncelleme denemesi için ayrı ad (`KabukTest`) ve HEADLESS'ı sabit açık bir kopya derle:
+  güncellemeden sonra kurulum programı Kabuk'u Gezgin üzerinden açtığı için ortam değişkenleri kaybolur ve gizli
+  olmayan kopya kullanıcının sağ tık menüsünü değiştirir.
+
 ## Arayüz kuralı: Chromium'un hazır öğeleri yok
 
 Uygulamanın hiçbir yerinde tarayıcının klasik/hazır öğeleri kullanılmaz:
@@ -59,7 +84,10 @@ varsa alt menü: Terminal, ayraç, bulunan araçlar. Araç listesi `contextmenu/
 hem Kabuk bu dosyayı okur. Yeni araç = bir satır.
 
 - **Kısa (Windows 11) menü:** `KabukMenu.dll` (C++, `IExplorerCommand`; araçları her menü açılışında PATH'te arar,
-  3 sn önbellek) + kimlik paketi `KabukMenu.msix` (sparse, `-ExternalLocation` = Kabuk klasörü). İmzasız paket
+  3 sn önbellek) + kimlik paketi `KabukMenu.msix` (sparse, `-ExternalLocation` = Kabuk klasörü). Kurulu Kabuk için
+  ayrı paket `KabukMenu-app.msix` (Executable = `Kabuk.exe`; ikisini de build.ps1 üretir, aynı sertifikayla imzalar).
+  DLL `<klasör>\Kabuk.exe` varsa onu, yoksa `node_modules\electron\dist\electron.exe "<klasör>"`'ü başlatır. Kurulu bir
+  Kabuk varsa (window-state.json `installedExe`) geliştirme klasöründen açılan Kabuk menüye dokunmaz. İmzasız paket
   per-user kurulamıyor ("unsigned package cannot include Executable activations"), bu yüzden paket `CN=Kabuk`
   imzalı: `build.ps1` her derlemede bellekte yeni sertifika üretir, imzalar, gizli anahtarı siler, açık kısmı
   `KabukMenu.cer`'e yazar. Windows'un güvenmesi için kullanıcı Ayarlar > Başlangıç'taki **"Windows 11 menüsüne
@@ -70,7 +98,7 @@ hem Kabuk bu dosyayı okur. Yeni araç = bir satır.
   eklentiyi "Diğer seçenekler"e de kendisi koyuyor, ikisi birden olunca orada iki "Kabuk ile aç" çıkıyor (denendi).
 - `contextmenu/menu.js` kurulum/kaldırma/durum (Electron'suz, doğrudan test edilebilir); main.js açılışta ve ayar
   değişince `settings.contextMenu`'ye göre eşitler (HEADLESS'ta hiç dokunmaz).
-- Tıklayınca: `electron.exe "<kabuk>" [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"`. Kabuk tek kopya çalışır
+- Tıklayınca: `electron.exe "<kabuk>" [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"` (kurulu sürümde `Kabuk.exe [...]`). Kabuk tek kopya çalışır
   (`requestSingleInstanceLock`): açıksa yeni pencere değil yeni sekme (`second-instance` → `open:request`).
   `--kabuk-run` yalnızca clis.txt'teki komutlar için kabul edilir. Komut, komut istemi görününce yazılır (`runWhenReady`).
 - DLL ya da manifest değişince: `powershell -File contextmenu\build.ps1` (Visual Studio C++ + Windows SDK gerekir),
@@ -104,7 +132,7 @@ gibi ConEmu kodları sayılmaz), OSC 777;notify;başlık;mesaj (Ghostty biçimi)
 olmaz; aynı sekmede başka panelse çerçeve yanıp söner; değilse sekmede nokta + Windows bildirimi + görev çubuğu
 (main.js `notify`). Claude Code tanımadığı terminale bildirim göndermez: kullanıcı Claude Code'da
 `/config > Notifications > Ghostty` seçmeli. Windows bildirimi için main.js açılışta Başlat menüsüne
-`Kabuk.lnk` (AppUserModelID `Kabuk`) yazar. Testte gerçek bildirim çıkmasın: `Notification.prototype.show`'u değiştir.
+`Kabuk.lnk` (AppUserModelID `Kabuk`) yazar (yalnızca geliştirme klasöründe; kurulu sürümün kısayolunu kurulum programı yazar, aynı kimlikle: package.json `appId`). Testte gerçek bildirim çıkmasın: `Notification.prototype.show`'u değiştir.
 
 Terminal bağlantıları: OSC 8 bağlantıları `linkHandler` → `confirmLink` (KUI onay kutusu, adres görünür) →
 kullanıcının tarayıcısı. Pencere içinde başka sayfa açılamaz (`setWindowOpenHandler` deny, `will-navigate` engelli).

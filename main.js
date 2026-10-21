@@ -68,6 +68,11 @@ function onScreen(b) {
 // Otomatik testlerde pencere hiç görünmeden, ekran dışında çizilir
 const HEADLESS = process.env.KABUK_HEADLESS === '1';
 
+// Kurulum dosyasıyla kurulan Kabuk'ta uygulama app.asar paketinin içindedir; Windows'un kendisinin okuduğu
+// dosyalar (simgeler, sağ tık menüsü) paketin dışında, Kabuk.exe'nin yanında durur (package.json > extraFiles)
+const ROOT = app.isPackaged ? path.dirname(process.execPath) : __dirname;
+const asset = (name) => path.join(ROOT, name);
+
 // ---------- Sağ tık menüsü ve kurulu yapay zekâ araçları (contextmenu/menu.js) ----------
 const menu = require('./contextmenu/menu');
 
@@ -118,7 +123,7 @@ let menuStatus = { state: HEADLESS ? 'off' : 'working', clis: [] };
 let menuWanted = null;              // ayarlardaki son değer
 let menuQueue = Promise.resolve();  // kurulumlar sırayla (aynı anda iki PowerShell kurulumu olmasın)
 const menuCtx = () => ({
-  appDir: __dirname,
+  appDir: ROOT,
   exe: process.execPath,
   label: mt('Kabuk ile aç'),
   readState,
@@ -129,10 +134,21 @@ function sendMenuStatus() {
   if (win && !win.isDestroyed()) win.webContents.send('menu:status', menuStatus);
 }
 
+// Bu bilgisayarda kurulum dosyasıyla kurulmuş bir Kabuk varsa, geliştirme klasöründen açılan Kabuk
+// sağ tık menüsüne dokunmaz (menü kurulu Kabuk'u açsın; ikisi sırayla birbirinin üstüne yazmasın).
+// Kurulu Kabuk her açılışta yerini window-state.json'a yazar (ayarlar klasörü ikisinde aynı)
+function installedElsewhere() {
+  if (app.isPackaged) return false;
+  const exe = readState().installedExe;
+  try { return !!exe && fs.statSync(exe).isFile(); } catch { return false; }
+}
+
 function syncMenu() {
   const run = async () => {
     if (HEADLESS || process.platform !== 'win32') {
       menuStatus = { state: 'off', clis: menu.detectClis().map((c) => c.name) };
+    } else if (installedElsewhere()) {
+      menuStatus = { state: 'installed', clis: menu.detectClis().map((c) => c.name) };
     } else {
       menuStatus = { ...menuStatus, state: 'working' };
       sendMenuStatus();
@@ -179,7 +195,10 @@ function ensureShortcuts() {
     appUserModelId: AUMID,
   };
   const startMenu = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Kabuk.lnk');
-  try { shell.writeShortcutLink(startMenu, fs.existsSync(startMenu) ? 'replace' : 'create', link); } catch {}
+  // Başlat menüsündeki kısayol kurulu Kabuk'unsa (Kabuk.exe) dokunma
+  let other = false;
+  try { other = path.resolve(shell.readShortcutLink(startMenu).target) !== path.resolve(process.execPath); } catch {}
+  if (!other) try { shell.writeShortcutLink(startMenu, fs.existsSync(startMenu) ? 'replace' : 'create', link); } catch {}
   // Masaüstü kısayolu yalnızca bu Kabuk'u açıyorsa güncellenir; başka bir şeyi gösteriyorsa dokunulmaz
   const desktop = path.join(app.getPath('desktop'), 'Kabuk.lnk');
   try {
@@ -204,7 +223,7 @@ function createWindow() {
     backgroundColor: '#00000000',
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#c0caf5', height: 40 },
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: asset('icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -250,6 +269,7 @@ ipcMain.handle('settings:apply', (_e, s) => {
   if (['tr', 'en'].includes(s.lang)) lang = s.lang;
   if (['normal', 'maximized', 'remember'].includes(s.startMode)) writeState({ startMode: s.startMode });
   if (typeof s.contextMenu === 'boolean') wantContextMenu(s.contextMenu);
+  if (typeof s.autoUpdate === 'boolean') updater.setAuto(s.autoUpdate && !HEADLESS);
 });
 
 ipcMain.handle('launch:take', () => { const r = initialLaunch; initialLaunch = null; return r; });
@@ -339,7 +359,7 @@ ipcMain.on('notify', (_e, { id, title, body, toast, flash }) => {
   const note = new Notification({
     title: String(title || 'Kabuk').slice(0, 120),
     body: String(body || '').slice(0, 400),
-    icon: path.join(__dirname, 'icon.png'),
+    icon: asset('icon.png'),
   });
   shownNotes.add(note);
   const forget = () => shownNotes.delete(note);
@@ -369,5 +389,21 @@ ipcMain.on('window:close', (_e, force) => {
   win?.close();
 });
 
-if (gotLock) app.whenReady().then(() => { ensureShortcuts(); createWindow(); });
+// ---------- Otomatik güncelleme (updater.js) ----------
+const { createUpdater } = require('./updater');
+const updater = createUpdater({
+  send: (s) => { if (win && !win.isDestroyed()) win.webContents.send('update:status', s); },
+  // Güncelleme için kapanırken "terminaller açık, kapatılsın mı?" sorusu sorulmaz (renderer zaten sordu)
+  beforeInstall: () => { forceClose = true; },
+});
+ipcMain.handle('update:status', () => updater.status());
+ipcMain.handle('update:check', () => updater.check(true));
+ipcMain.handle('update:install', () => updater.install());
+
+if (gotLock) app.whenReady().then(() => {
+  // Geliştirme klasöründen açılan Kabuk kurulu olanı bulabilsin (installedElsewhere)
+  if (app.isPackaged && !HEADLESS) writeState({ installedExe: process.execPath });
+  ensureShortcuts();
+  createWindow();
+});
 app.on('window-all-closed', () => app.quit());

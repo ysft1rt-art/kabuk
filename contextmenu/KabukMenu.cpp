@@ -8,7 +8,8 @@
 //   hiç yoksa   → tek satır "Kabuk ile aç" (terminal açar)
 //   varsa       → "Kabuk ile aç" alt menüsü: Terminal, ayraç, bulunan araçlar (Claude Code, Codex...)
 // Tıklanınca Kabuk şu şekilde başlatılır:
-//   electron.exe "<kabuk>" [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"
+//   kurulu sürüm:       Kabuk.exe [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"
+//   geliştirme klasörü: electron.exe "<kabuk>" [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"
 // Kabuk zaten açıksa yeni pencere açılmaz, açık pencerede yeni sekme açılır (main.js second-instance).
 //
 // Derleme: build.ps1
@@ -209,12 +210,17 @@ static std::wstring SelectedFolder(IShellItemArray* items) {
 
 static void LaunchKabuk(const std::wstring& dir, const std::wstring& run) {
   std::wstring app = AppDir();
-  std::wstring exe = app + L"\\node_modules\\electron\\dist\\electron.exe";
+  // Kurulum dosyasıyla kurulan Kabuk: <kurulum>\Kabuk.exe (eklenti <kurulum>\contextmenu içinde).
+  // Geliştirme klasörü: electron.exe + Kabuk klasörü
+  std::wstring exe = app + L"\\Kabuk.exe";
+  bool installed = FileExists(exe);
+  if (!installed) exe = app + L"\\node_modules\\electron\\dist\\electron.exe";
   if (!FileExists(exe)) return;
   // "C:\" gibi ters bölüyle biten yollar tırnağı kaçırmasın diye ters bölü ikilenir
   std::wstring d = dir;
   if (!d.empty() && d.back() == L'\\') d += L'\\';
-  std::wstring cmd = L"\"" + exe + L"\" \"" + app + L"\"";
+  std::wstring cmd = L"\"" + exe + L"\"";
+  if (!installed) cmd += L" \"" + app + L"\"";
   if (!run.empty()) cmd += L" --kabuk-run=" + run;
   cmd += L" \"--kabuk-dir=" + d + L"\"";
   std::vector<wchar_t> line(cmd.begin(), cmd.end());

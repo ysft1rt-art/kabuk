@@ -40,6 +40,8 @@ const DEFAULTS = {
   notifyToast: true,   // Windows bildirimi
   notifyFlash: true,   // görev çubuğunda yanıp sön
   notifyBell: true,    // zil sinyali (BEL) de sayılsın
+  // Güncellemeler
+  autoUpdate: true,    // birkaç saatte bir yeni sürüm var mı diye bak (updater.js)
 };
 const settings = { ...DEFAULTS };
 try {
@@ -769,6 +771,7 @@ function renderMenuStatus() {
       : t('Yeni menüye eklenemedi; "Diğer seçenekleri göster" altında açık.'),
     error: t('Menüye eklenemedi: {error}', { error: s.error || '?' }),
     off: settings.contextMenu ? t('Bu modda kapalı.') : t('Kapalı.'),
+    installed: t('Bu bilgisayarda kurulu Kabuk yönetiyor; menü onu açar.'),
   };
   let text = texts[s.state] || '';
   if (s.state === 'modern' || s.state === 'classic') {
@@ -795,6 +798,92 @@ $('menuTrust').onclick = async () => {
   if (r === 'canceled') showToast(t('Yönetici onayı verilmedi; menü "Diğer seçenekleri göster" altında kalmaya devam ediyor.'));
   else if (r !== 'done') showToast(t('İmza eklenemedi. Tekrar dene.'));
 };
+
+// ---------- Otomatik güncelleme (updater.js) ----------
+// Yeni sürüm bulununca üst çubukta düğme çıkar: indirilirken ilerleme, hazır olunca "Güncelle".
+// Düğme bir açılır panel açar (sürüm, notlar, "Yeniden başlat ve güncelle"). Ayarlar > Güncellemeler aynı durumu gösterir
+let update = { state: 'idle', current: '' };
+api.onUpdateStatus((s) => { const prev = update.state; update = s; renderUpdate(prev); });
+const pct = (n) => (LANG === 'en' ? `${n}%` : `%${n}`);
+
+function renderUpdate(prev = update.state) {
+  const s = update;
+  const percent = s.state === 'ready' ? 100 : Math.max(0, Math.min(100, s.percent || 0));
+
+  // Üst çubuktaki düğme
+  const btn = $('updateBtn');
+  const show = s.state === 'downloading' || s.state === 'ready';
+  const appearing = show && btn.hidden;
+  btn.hidden = !show;
+  if (!show && popoverOpen($('updatePanel'))) closePopovers();
+  btn.classList.toggle('ready', s.state === 'ready');
+  btn.style.setProperty('--p', percent + '%');
+  $('updateLabel').textContent = s.state === 'ready' ? t('Güncelle') : pct(percent);
+  btn.dataset.tip = s.state === 'ready' ? 'Yeni sürüm hazır' : 'Yeni sürüm indiriliyor';
+  if (appearing) animate(btn, 'chip-in');
+  else if (s.state === 'ready' && prev !== 'ready') animate(btn, 'chip-ready', null, 1200);
+  placePopover();
+
+  // Açılır panel
+  $('updateVer').textContent = s.version ? `Kabuk ${s.version}` : '';
+  $('updateSub').textContent = s.state === 'ready'
+    ? t('İndirildi, kurulmaya hazır. Şu an {v} kullanıyorsun.', { v: s.current })
+    : t('Arka planda indiriliyor… {p}', { p: pct(percent) });
+  $('updateBar').hidden = s.state !== 'downloading';
+  $('updateBarFill').style.width = percent + '%';
+  $('updateNotes').hidden = !s.notes;
+  $('updateNotes').textContent = s.notes || '';
+  $('updateInstall').textContent = t('Yeniden başlat ve güncelle');
+  $('updateInstall').disabled = s.state !== 'ready';
+  $('updateHint').hidden = s.state !== 'ready';
+
+  // Ayarlar > Güncellemeler
+  $('updateVersion').textContent = s.current ? `Kabuk ${s.current}` : 'Kabuk';
+  const time = s.checkedAt ? new Date(s.checkedAt).toLocaleTimeString(i18nLocale(), { hour: '2-digit', minute: '2-digit' }) : '';
+  const errors = {
+    offline: t('İnternete bağlanılamadı. Daha sonra tekrar denenecek.'),
+    'no-release': t("GitHub'da henüz yayınlanmış bir sürüm yok."),
+  };
+  const texts = {
+    unsupported: t("Güncellemeler yalnızca kurulum dosyasıyla kurulan Kabuk'ta çalışır."),
+    idle: '',
+    checking: t('Denetleniyor…'),
+    none: t('Kabuk güncel.') + (time ? ' ' + t('Son denetim: {time}', { time }) : ''),
+    downloading: t('Yeni sürüm bulundu: {v}. İndiriliyor… {p}', { v: s.version, p: pct(percent) }),
+    ready: t('Kabuk {v} indirildi. Yeniden başlatınca kurulur.', { v: s.version }),
+    error: errors[s.error] || t('Denetlenemedi: {error}', { error: s.error || '?' }),
+  };
+  const status = $('updateStatus');
+  status.textContent = texts[s.state] ?? '';
+  status.hidden = !status.textContent;
+  status.classList.toggle('set-error', s.state === 'error' && !errors[s.error]);
+  const check = $('updateCheck');
+  check.textContent = s.state === 'ready' ? t('Yeniden başlat ve güncelle') : t('Güncellemeleri denetle');
+  check.classList.toggle('primary', s.state === 'ready');
+  check.disabled = ['unsupported', 'checking', 'downloading'].includes(s.state);
+}
+
+// Yeni sürümü kurmak için Kabuk kapanıp yeniden açılır. Birden fazla terminal açıksa önce sorulur
+// (pencereyi kapatırkenki "Kapatırken sor" ayarıyla aynı kural)
+async function installUpdate() {
+  closePopovers();
+  if (update.state !== 'ready') return;
+  let n = 0;
+  forEachPane(() => n++);
+  if (settings.confirmClose && n > 1) {
+    const ok = await KUI.confirm({
+      title: t('Kabuk yeniden başlatılsın mı?'),
+      message: t('Yeni sürümü kurmak için Kabuk kapanıp yeniden açılacak. Açık {n} terminal ve içlerinde çalışan programlar kapanır.', { n }),
+      ok: t('Yeniden başlat'),
+    });
+    if (!ok) return;
+  }
+  await api.installUpdate();
+}
+
+$('updateBtn').onclick = (e) => { renderUpdate(); togglePopover($('updatePanel'), e.currentTarget, true); };
+$('updateInstall').onclick = installUpdate;
+$('updateCheck').onclick = () => (update.state === 'ready' ? installUpdate() : api.checkUpdate());
 
 function activateTab(tab) {
   activeTab = tab;
@@ -1368,7 +1457,7 @@ function hidePopover(p) {
 function closePopovers() {
   let any = KUI.closeMenus();
   for (const p of document.querySelectorAll('.popover')) if (hidePopover(p)) any = true;
-  document.querySelectorAll('.icon-btn.on, .hidden-chip.on').forEach((b) => b.classList.remove('on'));
+  document.querySelectorAll('.icon-btn.on, .hidden-chip.on, .update-chip.on').forEach((b) => b.classList.remove('on'));
   if (any) activeTab?.activePane?.term.focus();
   return any;
 }
@@ -1408,7 +1497,7 @@ window.addEventListener('resize', placePopover);
 // kendisi yönetir; onların içine tıklamak burada "dışarısı" sayılmamalı. Paneli açan düğmeye
 // tıklamak da sayılmaz (onu kendi tıklaması kapatır); başka bir üst çubuk düğmesi ise paneli kapatır
 document.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.popover, .icon-btn.on, .hidden-chip.on, .kmenu, .kselect, .kmodal-back')) return;
+  if (e.target.closest('.popover, .icon-btn.on, .hidden-chip.on, .update-chip.on, .kmenu, .kselect, .kmodal-back')) return;
   closePopovers();
 });
 
@@ -1449,6 +1538,7 @@ $('hiddenBtn').onclick = (e) => { renderHidden(); togglePopover($('hiddenPanel')
 $('helpBtn').onclick = (e) => togglePopover($('helpPanel'), e.currentTarget, true);
 $('helpEditKeys').onclick = () => openSettings('secKeys');
 KUI.scrollbar($('helpScroll'), $('helpPanel'));
+KUI.scrollbar($('updateNotes'), $('updatePanel'));
 $('settingsBtn').onclick = () => openSettings();
 
 // ---------- Ayarlar sekmesi ----------
@@ -1530,6 +1620,7 @@ const ui = {
   notifyToast: KUI.toggle($('setNotifyToast'), (on) => changeSetting('notifyToast', on)),
   notifyFlash: KUI.toggle($('setNotifyFlash'), (on) => changeSetting('notifyFlash', on)),
   notifyBell: KUI.toggle($('setNotifyBell'), (on) => changeSetting('notifyBell', on)),
+  autoUpdate: KUI.toggle($('setAutoUpdate'), (on) => changeSetting('autoUpdate', on)),
 };
 
 // Deneme: pencere önde olsa bile bildirimi gösterir
@@ -1558,6 +1649,7 @@ function applyLanguage() {
   renderAppearance();
   renderSettings();
   renderHidden();
+  renderUpdate();
   if (!$('shellMenu').classList.contains('hidden')) renderShellMenu();
   forEachPane((p) => p.hintSoon());
   syncMain();
@@ -1577,6 +1669,7 @@ async function syncMain() {
     startMode: settings.startMode,
     lang: settings.lang,
     contextMenu: settings.contextMenu,
+    autoUpdate: settings.autoUpdate,
   });
   shells = await api.listShells();
   if (!shells.some((s) => s.id === settings.shell)) settings.shell = shells[0]?.id;
@@ -1614,6 +1707,8 @@ function renderSettings() {
   ui.notifyFlash.setChecked(settings.notifyFlash);
   ui.notifyBell.setChecked(settings.notifyBell);
   for (const r of settingsPage.querySelectorAll('.notify-sub')) r.hidden = !settings.notify;
+  ui.autoUpdate.setChecked(settings.autoUpdate);
+  renderUpdate();
   renderKeys();
   requestAnimationFrame(markNav);
 
@@ -1654,7 +1749,7 @@ function changeSetting(key, value) {
   if (['cursorStyle', 'cursorBlink', 'lineHeight', 'scrollback'].includes(key)) {
     forEachPane((p) => { p.term.options[key] = value; p.fitSoon(); });
   }
-  if (['confirmClose', 'startMode', 'contextMenu'].includes(key)) syncMain();
+  if (['confirmClose', 'startMode', 'contextMenu', 'autoUpdate'].includes(key)) syncMain();
   renderSettings();
 }
 
@@ -1920,5 +2015,6 @@ api.onConfirmClose(async (count) => {
   renderFontControls();
   await loadFont();
   api.getMenuStatus().then((s) => { menuStatus = s; renderMenuStatus(); });
+  api.getUpdateStatus().then((s) => { update = s; renderUpdate(); });
   await openRequest(await api.takeLaunch());
 })();

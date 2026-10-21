@@ -28,14 +28,24 @@ cmd /c "`"$vcvars`" >nul 2>nul && $cl 2>&1"
 $ErrorActionPreference = 'Stop'
 if ($LASTEXITCODE) { throw "Derleme başarısız ($LASTEXITCODE)" }
 
-# Paket: AppxManifest.xml + simge
-$pkg = Join-Path $obj 'pkg'
-Remove-Item -Recurse -Force $pkg -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force $pkg | Out-Null
-Copy-Item "$here\package\AppxManifest.xml" $pkg
-Copy-Item "$here\..\icon.png" "$pkg\icon.png"   # simge, Kabuk klasöründeki icon.png ile aynı ad (Windows oradan okur)
-& $makeappx pack /o /nv /d $pkg /p "$here\KabukMenu.msix" | Out-Null
-if ($LASTEXITCODE) { throw "makeappx başarısız ($LASTEXITCODE)" }
+# Paketler: AppxManifest.xml + simge. İki tane:
+#   KabukMenu.msix      geliştirme klasörü için (Executable = node_modules\electron\dist\electron.exe)
+#   KabukMenu-app.msix  kurulum dosyasıyla kurulan Kabuk için (Executable = Kabuk.exe)
+$manifest = [IO.File]::ReadAllText("$here\package\AppxManifest.xml", [Text.Encoding]::UTF8)
+$packages = @(
+  @{ Out = "$here\KabukMenu.msix"; Manifest = $manifest },
+  @{ Out = "$here\KabukMenu-app.msix"; Manifest = $manifest.Replace('Executable="node_modules\electron\dist\electron.exe"', 'Executable="Kabuk.exe"') }
+)
+if ($packages[1].Manifest -eq $manifest) { throw 'Manifestte electron.exe satırı bulunamadı' }
+foreach ($p in $packages) {
+  $pkg = Join-Path $obj 'pkg'
+  Remove-Item -Recurse -Force $pkg -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force $pkg | Out-Null
+  [IO.File]::WriteAllText("$pkg\AppxManifest.xml", $p.Manifest, (New-Object System.Text.UTF8Encoding $false))
+  Copy-Item "$here\..\icon.png" "$pkg\icon.png"   # simge, Kabuk klasöründeki icon.png ile aynı ad (Windows oradan okur)
+  & $makeappx pack /o /nv /d $pkg /p $p.Out | Out-Null
+  if ($LASTEXITCODE) { throw "makeappx başarısız ($LASTEXITCODE)" }
+}
 
 # İmza: her derlemede yeni bir "CN=Kabuk" sertifikası bellekte üretilir, paket imzalanır, gizli anahtar
 # silinir. Yalnızca açık sertifika (KabukMenu.cer) kalır; Windows'a güvendirilen budur. Anahtar olmadığı
@@ -57,12 +67,14 @@ try {
   [IO.File]::WriteAllBytes($pfx, $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, $pass))
   [IO.File]::WriteAllBytes("$here\KabukMenu.cer", $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert))
   $ErrorActionPreference = 'Continue'
-  & $signtool sign /q /fd SHA256 /f $pfx /p $pass "$here\KabukMenu.msix" 2>&1 | Out-Null
-  $code = $LASTEXITCODE
+  foreach ($p in $packages) {
+    & $signtool sign /q /fd SHA256 /f $pfx /p $pass $p.Out 2>&1 | Out-Null
+    $code = $LASTEXITCODE
+    if ($code) { $ErrorActionPreference = 'Stop'; throw "İmzalama başarısız ($code)" }
+  }
   $ErrorActionPreference = 'Stop'
-  if ($code) { throw "İmzalama başarısız ($code)" }
 } finally {
   Remove-Item -Force $pfx -ErrorAction SilentlyContinue
   $cert.Dispose(); $rsa.Dispose()
 }
-Write-Output ("Tamam: KabukMenu.dll, KabukMenu.msix, KabukMenu.cer (" + (New-Object "$X.X509Certificate2" "$here\KabukMenu.cer").Thumbprint + ")")
+Write-Output ("Tamam: KabukMenu.dll, KabukMenu.msix, KabukMenu-app.msix, KabukMenu.cer (" + (New-Object "$X.X509Certificate2" "$here\KabukMenu.cer").Thumbprint + ")")

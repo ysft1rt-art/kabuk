@@ -1,0 +1,35 @@
+# Yeni sürüm yayınlama: "v1.2.3" gibi bir etiket gönderilince (git push origin v1.2.3) GitHub kurulum
+# dosyasını Windows'ta derler ve Releases sayfasına koyar. Kurulu Kabuk'lar yeni sürümü oradan bulur.
+# Etiket, package.json'daki sürümle aynı olmalı.
+name: Sürüm yayınla
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Etiket package.json sürümüyle aynı mı
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ("v$v" -ne "${{ github.ref_name }}") { throw "package.json sürümü ($v) etiketle (${{ github.ref_name }}) aynı değil" }
+
+      - name: Derle ve yayınla
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

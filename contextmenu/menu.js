@@ -20,10 +20,14 @@ const os = require('os');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
 
-const DIR = __dirname;
+// Kurulum dosyasıyla kurulan Kabuk'ta bu dosya app.asar paketinin içindedir; menü dosyaları (DLL, paket,
+// sertifika, clis.txt) ise Windows'un okuyabilmesi için paketin dışında: <kurulum>\contextmenu
+const INSTALLED = __dirname.includes('app.asar');
+const DIR = INSTALLED ? path.join(path.dirname(process.execPath), 'contextmenu') : __dirname;
 const PACKAGE = 'Kabuk.ContextMenu';
-const PACKAGE_VERSION = '1.0.0.0';   // package/AppxManifest.xml ile aynı
-const MSIX = path.join(DIR, 'KabukMenu.msix');
+const PACKAGE_VERSION = '1.0.1.0';   // package/AppxManifest.xml ile aynı
+// Kurulu sürümün paketinde Executable = Kabuk.exe, geliştirme klasörününkinde electron.exe (build.ps1)
+const MSIX = path.join(DIR, INSTALLED ? 'KabukMenu-app.msix' : 'KabukMenu.msix');
 const CER = path.join(DIR, 'KabukMenu.cer');
 const CLASSIC_KEYS = ['Directory\\shell\\Kabuk', 'Directory\\Background\\shell\\Kabuk', 'Drive\\shell\\Kabuk']
   .map((k) => `HKCU:\\Software\\Classes\\${k}`);
@@ -92,8 +96,10 @@ function powershell(script, timeout = 90000) {
 }
 
 // ---------- Eski menü ----------
+// Kurulu sürüm: Kabuk.exe ... · geliştirme klasörü: electron.exe "<kabuk>" ...
 function menuCommand(ctx, run) {
-  return `"${ctx.exe}" "${ctx.appDir}"${run ? ` --kabuk-run=${run}` : ''} "--kabuk-dir=%V"`;
+  const app = INSTALLED ? '' : ` "${ctx.appDir}"`;
+  return `"${ctx.exe}"${app}${run ? ` --kabuk-run=${run}` : ''} "--kabuk-dir=%V"`;
 }
 
 function classicScript(ctx, install, clis = []) {

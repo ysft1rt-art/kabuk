@@ -41,7 +41,8 @@ const i18nMissing = () => [...I18N_MISSING];
 // Kodun kendisinin doldurduğu yerler (zaten t() ile yazılıyor) ve terminaller atlanır
 const I18N_SKIP = [
   '#tabs', '.pane', '#helpKeys', '#hiddenList', '#shellMenu', '#keyGroups', '#shellList', '#hiddenCount',
-  '#startDirFixed', '#menuStatus', '#fontPreview', '#fontSizeLabel', '#addShellError', '#setLang', '.set-path', '.kselect',
+  '#startDirFixed', '#menuStatus', '#updateLabel', '#updateVer', '#updateSub', '#updateNotes', '#updateVersion', '#updateStatus',
+  '#updateCheck', '#updateInstall', '#fontPreview', '#fontSizeLabel', '#addShellError', '#setLang', '.set-path', '.kselect',
   '.kslider-host', '.kmenu', '.ktip', '.kmodal-back', '#toast', 'script', 'style', 'svg',
 ].join(', ');
 const i18nOrigText = new WeakMap();
@@ -323,4 +324,31 @@ const EN = {
   'hangi klasörde olduğunu gösterir': 'shows which folder you are in',
   'dosyanın içini ekrana yazar': 'prints the file to the screen',
   'son kayıtları (commit) listeler': 'lists recent commits',
+  // Güncellemeler (updater.js)
+  'Güncelleme': 'Update',
+  'Güncellemeler': 'Updates',
+  'Güncelle': 'Update',
+  'Yeni sürüm hazır': 'New version ready',
+  'Yeni sürüm indiriliyor': 'Downloading new version',
+  'İndirildi, kurulmaya hazır. Şu an {v} kullanıyorsun.': 'Downloaded and ready to install. You are on {v}.',
+  'Arka planda indiriliyor… {p}': 'Downloading in the background… {p}',
+  'Yeniden başlat ve güncelle': 'Restart and update',
+  "Şimdi istemezsen, Kabuk'u kapattığında kendiliğinden kurulur.": "If you'd rather wait, it installs by itself when you close Kabuk.",
+  "Yeni sürümler Kabuk'un GitHub sayfasından indirilir.": "New versions are downloaded from Kabuk's GitHub page.",
+  'Güncellemeleri denetle': 'Check for updates',
+  'Otomatik denetle': 'Check automatically',
+  'Kabuk açıkken birkaç saatte bir yeni sürüm var mı diye bakar. Bulursa arka planda indirir ve üst çubukta Güncelle düğmesi çıkar.': 'While Kabuk is open, it looks for a new version every few hours. If it finds one, it downloads it in the background and an Update button appears in the top bar.',
+  'İnternete bağlanılamadı. Daha sonra tekrar denenecek.': "Couldn't reach the internet. Kabuk will try again later.",
+  "GitHub'da henüz yayınlanmış bir sürüm yok.": 'No version has been published on GitHub yet.',
+  "Güncellemeler yalnızca kurulum dosyasıyla kurulan Kabuk'ta çalışır.": 'Updates only work in Kabuk installed with the setup file.',
+  'Denetleniyor…': 'Checking…',
+  'Kabuk güncel.': 'Kabuk is up to date.',
+  'Son denetim: {time}': 'Last checked: {time}',
+  'Yeni sürüm bulundu: {v}. İndiriliyor… {p}': 'New version found: {v}. Downloading… {p}',
+  'Kabuk {v} indirildi. Yeniden başlatınca kurulur.': 'Kabuk {v} is downloaded. It installs when you restart.',
+  'Denetlenemedi: {error}': "Couldn't check: {error}",
+  'Kabuk yeniden başlatılsın mı?': 'Restart Kabuk?',
+  'Yeni sürümü kurmak için Kabuk kapanıp yeniden açılacak. Açık {n} terminal ve içlerinde çalışan programlar kapanır.': 'To install the new version, Kabuk will close and reopen. The {n} open terminals and the programs running in them will close.',
+  'Yeniden başlat': 'Restart',
+  'Bu bilgisayarda kurulu Kabuk yönetiyor; menü onu açar.': 'Managed by the Kabuk installed on this computer; the menu opens that one.',
 };
