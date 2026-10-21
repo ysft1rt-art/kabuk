@@ -28,6 +28,9 @@ dosyaları (simgeler, `contextmenu\`) gösterir, çünkü uygulamanın kendisi `
   hazır olunca "Güncelle"), açılır paneli `#updatePanel`. "Yeniden başlat ve güncelle" → `quitAndInstall` (sessiz
   kurulum, Kabuk kendiliğinden yeniden açılır). Basılmazsa Kabuk kapanırken kurulur. Ayarlar > Güncellemeler'de
   elle denetleme. Geliştirme klasöründe durum `unsupported`.
+- **npm ile Electron güncellenince** `node_modules\electron\dist` boş kalabiliyor (indirme betiği çalışmıyor;
+  2026-10-21'de oldu). Masaüstü kısayolu oradaki electron.exe'yi açtığı için kontrol et; yoksa
+  `node node_modules/electron/install.js`.
 - **Test:** geliştirme klasöründe `KABUK_UPDATE_CONFIG=<yml>` (generic sağlayıcı, yerel sunucu) ile güncelleme akışı
   denenebilir. Paketli uygulama `--user-data-dir=<geçici>` + `KABUK_HEADLESS=1` ile kullanıcının ayarlarına dokunmadan
   çalışır. Gerçek kurulum/güncelleme denemesi için ayrı ad (`KabukTest`) ve HEADLESS'ı sabit açık bir kopya derle:
@@ -115,7 +118,8 @@ ve açık temada koyu tutulan "beyaz" otomatik türetilir. Temalar Ayarlar > Gö
 
 ## Çizim (WebGL)
 
-Terminaller WebGL eklentisiyle çizilir. Eklenti `node_modules`'tan değil, iki hata düzeltmesi yapılmış kopyası
+Terminaller WebGL eklentisiyle çizilir. Eklenti `node_modules`'tan değil (`@xterm/addon-webgl` yalnızca kaynak olarak
+devDependencies'te; kurulum dosyasına girmez), iki hata düzeltmesi yapılmış kopyası
 `renderer/vendor/addon-webgl.js`'ten yüklenir (dosyanın başındaki açıklamada ne değiştiği yazıyor: buzlu camda soluk/
 italik yazıların arkasındaki siyah kutular ve saydam zeminde incelen harfler). `@xterm/addon-webgl` güncellenirse
 kopyayı aynı iki değişiklikle yeniden üret ve buzlu camı koyu + açık temada soluk (`\x1b[2m`) ve italik yazıyla dene.

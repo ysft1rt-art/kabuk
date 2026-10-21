@@ -345,4 +345,3 @@ const SCENES = {
   },
 };
 
-window.KabukFun = { FunLayer, FUN_WORDS, PROMPT_RE, funScene };
