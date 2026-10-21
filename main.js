@@ -189,7 +189,7 @@ function ensureShortcuts() {
     target: process.execPath,
     args: `"${app.getAppPath()}"`,
     cwd: app.getAppPath(),
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: path.join(__dirname, 'assets', 'icon.ico'),
     iconIndex: 0,
     description: 'Kabuk terminali',
     appUserModelId: AUMID,
@@ -203,8 +203,10 @@ function ensureShortcuts() {
   const desktop = path.join(app.getPath('desktop'), 'Kabuk.lnk');
   try {
     const cur = shell.readShortcutLink(desktop);
-    if (path.resolve(cur.target) === path.resolve(process.execPath) && cur.appUserModelId !== AUMID) {
-      shell.writeShortcutLink(desktop, 'update', { appUserModelId: AUMID });
+    // Simge yolu da güncellenir (simgeler assets klasörüne taşındı; eski yol artık yok)
+    if (path.resolve(cur.target) === path.resolve(process.execPath) &&
+        (cur.appUserModelId !== AUMID || path.resolve(cur.icon || '') !== path.resolve(link.icon))) {
+      shell.writeShortcutLink(desktop, 'update', { target: cur.target, appUserModelId: AUMID, icon: link.icon, iconIndex: 0 });
     }
   } catch {}
 }
@@ -223,7 +225,7 @@ function createWindow() {
     backgroundColor: '#00000000',
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#c0caf5', height: 40 },
-    icon: asset('icon.ico'),
+    icon: asset('assets/icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -359,7 +361,7 @@ ipcMain.on('notify', (_e, { id, title, body, toast, flash }) => {
   const note = new Notification({
     title: String(title || 'Kabuk').slice(0, 120),
     body: String(body || '').slice(0, 400),
-    icon: asset('icon.png'),
+    icon: asset('assets/icon.png'),
   });
   shownNotes.add(note);
   const forget = () => shownNotes.delete(note);

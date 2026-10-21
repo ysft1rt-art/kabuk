@@ -14,7 +14,7 @@ Push'u kullanıcı isterse yap.
 Kabuk iki şekilde çalışır: **geliştirme klasöründen** (`electron.exe .`, masaüstü kısayolu; Claude burada çalışır)
 ve **kurulum dosyasıyla kurulmuş** olarak (`Kabuk.exe`, `%LOCALAPPDATA%\Programs\kabuk`). Ayarlar klasörü ikisinde
 aynı (`%APPDATA%\Kabuk`). Kodda ayrım `app.isPackaged`; main.js'te `ROOT`/`asset()` Kabuk.exe'nin yanındaki
-dosyaları (simgeler, `contextmenu\`) gösterir, çünkü uygulamanın kendisi `resources\app.asar` paketinin içinde.
+dosyaları (simgeler `assets\`, `contextmenu\`) gösterir, çünkü uygulamanın kendisi `resources\app.asar` paketinin içinde.
 
 - **Derleme:** `npm run dist` → `dist\Kabuk-Kurulum-<sürüm>.exe` (electron-builder, ayarlar package.json `build`).
   Tek tıkla kurulur, yönetici izni istemez. `build/installer.nsh`: güncellemeden önce kilitli olabilecek

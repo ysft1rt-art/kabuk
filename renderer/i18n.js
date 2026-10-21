@@ -203,9 +203,9 @@ const EN = {
   'Pencerenin arkası bulanık ve yarı saydam görünür.': 'The window background looks blurred and translucent.',
   'Cam yoğunluğu': 'Glass opacity',
   'Azaldıkça arkadaki pencereler daha çok görünür.': 'Lower values show more of the windows behind.',
-  'Eğlence modu ✨': 'Fun mode ✨',
+  'Eğlence modu': 'Fun mode',
   'Boş satırda ipuçları ve gizli kelimelerle küçük animasyonlar.': 'Hints on the empty line and small animations triggered by secret words.',
-  'Komut önerileri 💡': 'Command suggestions 💡',
+  'Komut önerileri': 'Command suggestions',
   'Yeni açılan terminalde, bir şey yazana kadar boş satırda örnek komutlar akar.': 'In a new terminal, example commands scroll by on the empty line until you type something.',
 
   // Ayarlar: Yazı tipi
@@ -300,8 +300,8 @@ const EN = {
   'Tüm ayarları sıfırla': 'Reset all settings',
 
   // Eğlence modu ve komut önerileri (fun.js)
-  '✨ eğlence için yaz: kedi · köpek · kuş · balık · kar · fişek · kalp': '✨ for fun, type: cat · dog · bird · fish · snow · fireworks · heart',
-  '💡 dene:': '💡 try:',
+  'eğlence için yaz: kedi · köpek · kuş · balık · kar · fişek · kalp': 'for fun, type: cat · dog · bird · fish · snow · fireworks · heart',
+  'dene:': 'try:',
   'mkdir yeni-klasor': 'mkdir new-folder',
   'notepad notlar.txt': 'notepad notes.txt',
   'cat notlar.txt': 'cat notes.txt',

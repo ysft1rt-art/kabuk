@@ -321,7 +321,7 @@ class Command : public IExplorerCommand {
   }
 
   IFACEMETHODIMP GetIcon(IShellItemArray*, LPWSTR* icon) override {
-    if (kind_ == Kind::Root || kind_ == Kind::Terminal) return Dup(AppDir() + L"\\icon.ico", icon);
+    if (kind_ == Kind::Root || kind_ == Kind::Terminal) return Dup(AppDir() + L"\\assets\\icon.ico", icon);
     // Araç bir .exe ise kendi simgesi
     if (kind_ == Kind::Cli && cli_.file.size() > 4 && _wcsicmp(cli_.file.c_str() + cli_.file.size() - 4, L".exe") == 0)
       return Dup(cli_.file + L",0", icon);

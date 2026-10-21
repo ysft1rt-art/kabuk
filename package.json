@@ -42,9 +42,7 @@
       "preload.js",
       "updater.js",
       "contextmenu/menu.js",
-      "renderer/**/*",
-      "icon.ico",
-      "icon.png"
+      "renderer/**/*"
     ],
     "extraFiles": [
       {
@@ -59,12 +57,12 @@
         ]
       },
       {
-        "from": "icon.ico",
-        "to": "icon.ico"
-      },
-      {
-        "from": "icon.png",
-        "to": "icon.png"
+        "from": "assets",
+        "to": "assets",
+        "filter": [
+          "icon.ico",
+          "icon.png"
+        ]
       }
     ],
     "asarUnpack": [
@@ -80,7 +78,7 @@
           ]
         }
       ],
-      "icon": "icon.ico",
+      "icon": "assets/icon.ico",
       "executableName": "Kabuk"
     },
     "nsis": {
@@ -92,8 +90,8 @@
       "shortcutName": "Kabuk",
       "uninstallDisplayName": "Kabuk",
       "artifactName": "Kabuk-Kurulum-${version}.${ext}",
-      "installerIcon": "icon.ico",
-      "uninstallerIcon": "icon.ico",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
       "include": "build/installer.nsh"
     },
     "publish": [

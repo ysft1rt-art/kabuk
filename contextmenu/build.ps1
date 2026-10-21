@@ -42,7 +42,8 @@ foreach ($p in $packages) {
   Remove-Item -Recurse -Force $pkg -ErrorAction SilentlyContinue
   New-Item -ItemType Directory -Force $pkg | Out-Null
   [IO.File]::WriteAllText("$pkg\AppxManifest.xml", $p.Manifest, (New-Object System.Text.UTF8Encoding $false))
-  Copy-Item "$here\..\icon.png" "$pkg\icon.png"   # simge, Kabuk klasöründeki icon.png ile aynı ad (Windows oradan okur)
+  New-Item -ItemType Directory -Force "$pkg\assets" | Out-Null
+  Copy-Item "$here\..\assets\icon.png" "$pkg\assets\icon.png"   # simge, Kabuk klasöründeki assets\icon.png ile aynı yol (Windows oradan okur)
   & $makeappx pack /o /nv /d $pkg /p $p.Out | Out-Null
   if ($LASTEXITCODE) { throw "makeappx başarısız ($LASTEXITCODE)" }
 }

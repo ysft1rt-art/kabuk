@@ -25,7 +25,7 @@ const { execFile } = require('child_process');
 const INSTALLED = __dirname.includes('app.asar');
 const DIR = INSTALLED ? path.join(path.dirname(process.execPath), 'contextmenu') : __dirname;
 const PACKAGE = 'Kabuk.ContextMenu';
-const PACKAGE_VERSION = '1.0.1.0';   // package/AppxManifest.xml ile aynı
+const PACKAGE_VERSION = '1.0.2.0';   // package/AppxManifest.xml ile aynı
 // Kurulu sürümün paketinde Executable = Kabuk.exe, geliştirme klasörününkinde electron.exe (build.ps1)
 const MSIX = path.join(DIR, INSTALLED ? 'KabukMenu-app.msix' : 'KabukMenu.msix');
 const CER = path.join(DIR, 'KabukMenu.cer');
@@ -105,7 +105,7 @@ function menuCommand(ctx, run) {
 function classicScript(ctx, install, clis = []) {
   const lines = [`foreach ($k in @(${CLASSIC_KEYS.map(psq).join(',')})) { if (Test-Path -LiteralPath $k) { Remove-Item -LiteralPath $k -Recurse -Force } }`];
   if (!install) return lines.join('\n');
-  const icon = path.join(ctx.appDir, 'icon.ico');
+  const icon = path.join(ctx.appDir, 'assets', 'icon.ico');
   const prop = (key, name, value, type) =>
     `New-ItemProperty -LiteralPath ${psq(key)} -Name ${name} -Value ${value}${type ? ` -PropertyType ${type}` : ''} -Force | Out-Null`;
   for (const k of CLASSIC_KEYS) {

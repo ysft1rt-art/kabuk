@@ -16,7 +16,7 @@ function funScene(text) {
   const word = text.trim().replace(/\s+/g, ' ').toLocaleLowerCase('tr').replace(/[ışçğöü]/g, (c) => TR_PLAIN[c]);
   return Object.hasOwn(FUN_WORDS, word) ? FUN_WORDS[word] : null;
 }
-const FUN_HINT = '✨ eğlence için yaz: kedi · köpek · kuş · balık · kar · fişek · kalp';
+const FUN_HINT = 'eğlence için yaz: kedi · köpek · kuş · balık · kar · fişek · kalp';
 
 // Yeni açılan terminalde, henüz bir şey yazılmamışken boş satırda sırayla akan komut önerileri
 const TIPS = {
@@ -222,7 +222,7 @@ class FunLayer {
     const c = document.createElement('span');
     c.className = 'cmd-tip-cmd';
     c.textContent = tq(cmd);   // "mkdir yeni-klasor" → "mkdir new-folder"
-    el.append(t('💡 dene: '), c, '  · ' + t(desc));
+    el.append(t('dene: '), c, '  · ' + t(desc));
     const old = this.tips.querySelectorAll('.cmd-tip:not(.out)');
     old.forEach((o) => { o.classList.add('out'); setTimeout(() => o.remove(), 400); });
     this.tips.append(el);

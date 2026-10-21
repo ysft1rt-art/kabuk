@@ -19,13 +19,13 @@
 
   <Identity Name="Kabuk.ContextMenu"
     Publisher="CN=Kabuk"
-    Version="1.0.1.0"
+    Version="1.0.2.0"
     ProcessorArchitecture="neutral" />
 
   <Properties>
     <DisplayName>Kabuk</DisplayName>
     <PublisherDisplayName>Kabuk</PublisherDisplayName>
-    <Logo>icon.png</Logo>
+    <Logo>assets\icon.png</Logo>
     <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
   </Properties>
 
@@ -52,8 +52,8 @@
         DisplayName="Kabuk"
         Description="Kabuk terminali"
         BackgroundColor="transparent"
-        Square150x150Logo="icon.png"
-        Square44x44Logo="icon.png" />
+        Square150x150Logo="assets\icon.png"
+        Square44x44Logo="assets\icon.png" />
       <Extensions>
         <desktop4:Extension Category="windows.fileExplorerContextMenus">
           <desktop4:FileExplorerContextMenus>
