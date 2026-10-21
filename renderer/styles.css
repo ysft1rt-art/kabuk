@@ -106,6 +106,13 @@ body { display: flex; flex-direction: column; }
 .tab .tab-close:hover { opacity: 1; background: var(--border); }
 .tab .tab-close svg { width: 10px; height: 10px; }
 
+/* Sekme sürükleme (renderer.js startTabDrag): tutulan sekme fareyi izler ve öndedir,
+   diğerleri yer açmak için kayar. Sürüklerken başlık çubuğu pencereyi taşımasın */
+.tab.dragging { z-index: 3; transition: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }
+.tab.drag-shift { transition: transform .16s cubic-bezier(.2, .8, .2, 1), background .12s, color .12s; }
+body.tab-dragging #titlebar { -webkit-app-region: no-drag; }
+body.tab-dragging, body.tab-dragging * { cursor: default !important; }
+
 /* Sekme açılış/kapanış: genişliği sıfırdan açılır / sıfıra kapanır, böylece yanındaki
    sekmeler ve + düğmesi zıplamadan kayar. margin-right sekmeler arasındaki 2px boşluğu da kapatır */
 .tab.tab-in, .tab.tab-out { overflow: hidden; }
@@ -373,6 +380,11 @@ body.light .multi .pane:not(.focused)::after { background: rgba(255, 255, 255, .
   box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
 }
 .popover.hidden { display: none; }
+/* Açılış/kapanış (renderer.js showPopover / hidePopover; kapanış süresi POP_OUT_MS ile aynı) */
+.popover.pop-in { animation: pop-in .16s cubic-bezier(.2, .8, .2, 1); }
+.popover.pop-out { animation: pop-out .12s ease-in forwards; pointer-events: none; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(.96); } }
+@keyframes pop-out { to { opacity: 0; transform: translateY(-4px) scale(.97); } }
 .popover-title {
   font-size: 11px;
   font-weight: 600;

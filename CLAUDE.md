@@ -38,6 +38,19 @@ DOM'dan silinir), yeni sekme içeriği (`content-in`), yeni bölünen panel (`pa
 değişince genişlik `updateTabTitle` içinde yumuşakça kayar (açılış sürerken değil: `tab.opening`).
 Terminal içeren öğelerde yalnızca kaydırma + saydamlık: `scale` xterm'in harf ölçüsünü bozar.
 Panel genişliğini (flex) canlandırma: her karede kabuk yeniden boyutlanır.
+Açılır paneller (`.popover`: kabuk menüsü, gizli terminaller, kısayollar) `showPopover`/`hidePopover` ile açılıp
+kapanır (`pop-in`/`pop-out`); kapanış sürerken panel kapalı sayılır (`popoverOpen`). Doğrudan `hidden` sınıfı ekleme.
+
+## Sekme sürükleme
+
+`startTabDrag` (renderer.js): sekmeye basılı tutup 5 px'ten fazla çekince başlar. Sürüklerken DOM sırası değişmez,
+yalnızca `transform` ile kayılır; bırakınca `tabs` dizisi ve DOM sırası birlikte değişir (Ctrl+Tab bu sırayı izler).
+
+## Ctrl+Z: yeni terminali geri alma
+
+`undoOpen` kısayolu (varsayılan Ctrl+Z, yalnızca terminal içinde). Bölünerek açılan panel `openedFrom` = bölünen panel,
+yeni sekmenin paneli `openedFrom` = önceki sekme. O panele henüz tuş basılmadıysa/yapıştırılmadıysa (`touched`)
+Ctrl+Z onu kapatıp geri döner; yoksa (`undoTarget()` null) tuş engellenmez ve programa gider (PowerShell'de geri alma).
 
 ## Temalar
 

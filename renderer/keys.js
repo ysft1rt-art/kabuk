@@ -21,6 +21,8 @@ window.KabukKeys = (() => {
     { id: 'splitRight', group: 'split', name: 'Sağa terminal aç', keys: ['Alt+ArrowRight', 'Ctrl+Shift+D'] },
     { id: 'splitUp', group: 'split', name: 'Yukarıya terminal aç', keys: ['Alt+ArrowUp'] },
     { id: 'splitLeft', group: 'split', name: 'Sola terminal aç', keys: ['Alt+ArrowLeft'] },
+    { id: 'undoOpen', group: 'split', name: 'Yeni açılan terminali geri al', term: true, keys: ['Ctrl+Z'],
+      desc: 'Yeni terminale henüz bir şey yazmadıysan kapatır ve geldiğin yere döner. Yazdıysan Ctrl+Z programa gider.' },
 
     { id: 'focusDown', group: 'focus', name: 'Alttaki panele geç', keys: ['Ctrl+Alt+ArrowDown'] },
     { id: 'focusRight', group: 'focus', name: 'Sağdaki panele geç', keys: ['Ctrl+Alt+ArrowRight'] },

@@ -251,6 +251,8 @@ const EN = {
   'Yazı ve pano': 'Text and clipboard',
   'Yukarıya terminal aç': 'Open terminal above',
   'Sola terminal aç': 'Open terminal to the left',
+  'Yeni açılan terminali geri al': 'Undo newly opened terminal',
+  'Yeni terminale henüz bir şey yazmadıysan kapatır ve geldiğin yere döner. Yazdıysan Ctrl+Z programa gider.': "Closes a new terminal you haven't typed in yet and takes you back. Once you type, Ctrl+Z goes to the program.",
   'Alttaki panele geç': 'Go to the pane below',
   'Sağdaki panele geç': 'Go to the pane on the right',
   'Üstteki panele geç': 'Go to the pane above',

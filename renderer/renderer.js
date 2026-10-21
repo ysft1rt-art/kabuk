@@ -256,6 +256,8 @@ class Pane {
     this.ptyId = null;
     this.title = '';
     this.attention = false;   // bildirim geldi, kullanıcı henüz bakmadı
+    this.openedFrom = null;   // bölünerek açıldıysa bölünen panel, yeni sekmeyse önceki sekme (Ctrl+Z ile dönülür)
+    this.touched = false;     // kullanıcı bu terminale bir şey yazdı/yapıştırdı mı
     this.el = document.createElement('div');
     this.el.className = 'pane';
     const host = document.createElement('div');
@@ -515,6 +517,8 @@ class Pane {
 
   handleKey(e) {
     if (e.type !== 'keydown') return true;
+    // Bu terminale bir tuşa basıldı: artık Ctrl+Z ile geri alınmaz (undoTarget)
+    if (!['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'].includes(e.key)) this.touched = true;
     const k = e.key.toLowerCase();
     // Ctrl+C: seçim varsa kopyala
     if (e.ctrlKey && !e.shiftKey && !e.altKey && k === 'c' && this.term.hasSelection()) {
@@ -533,7 +537,7 @@ class Pane {
 
   async paste() {
     const text = await api.readClipboard();
-    if (text) this.term.paste(text);
+    if (text) { this.touched = true; this.term.paste(text); }
   }
 
   // Gizliyken DOM dışındaydı; geri gelince boyutla ve yeniden çiz
@@ -687,7 +691,10 @@ function makeTab(icon = '') {
   tab.badgeEl = tab.tabEl.querySelector('.tab-badge');
   tab.tabEl.addEventListener('mousedown', (e) => {
     if (e.button === 1) { e.preventDefault(); closeTab(tab); }
-    else if (!e.target.closest('.tab-close')) activateTab(tab);
+    else if (!e.target.closest('.tab-close')) {
+      activateTab(tab);
+      if (e.button === 0) startTabDrag(tab, e);
+    }
   });
   tab.tabEl.querySelector('.tab-close').addEventListener('click', () => closeTab(tab));
   tabsEl.appendChild(tab.tabEl);
@@ -704,8 +711,10 @@ function makeTab(icon = '') {
 }
 
 async function newTab(shellId = settings.shell, existingPane = null) {
+  const prevTab = activeTab;
   const tab = makeTab();
   const pane = existingPane || new Pane(tab);
+  if (!existingPane) pane.openedFrom = prevTab;
   pane.tab = tab;
   pane.el.style.flex = '';
   tab.root = pane;
@@ -747,6 +756,71 @@ function closeTab(tab) {
   tabs.splice(idx, 1);
   if (!tabs.length) { api.closeWindow(); return; }
   if (activeTab === tab) activateTab(tabs[Math.min(idx, tabs.length - 1)]);
+}
+
+// ---------- Sekmeleri sürükleyip taşıma ----------
+// Basılı tutup yana çekince sekme fareyi izler, diğer sekmeler yer açmak için kayar;
+// bırakınca sekme yeni yerine oturur. 5 px'ten az oynarsa normal tıklama sayılır
+const TAB_GAP = 2;   // sekmeler arası boşluk (styles.css #tabs gap)
+function startTabDrag(tab, e) {
+  if (tabs.length < 2) return;
+  const startX = e.clientX;
+  let drag = null;
+  const move = (ev) => {
+    const dx = ev.clientX - startX;
+    if (!drag) {
+      if (Math.abs(dx) < 5 || tab.opening) return;
+      const from = tabs.indexOf(tab);
+      if (from < 0) return;
+      drag = { from, to: from, rects: tabs.map((tb) => tb.tabEl.getBoundingClientRect()) };
+      tab.tabEl.classList.add('dragging');
+      document.body.classList.add('tab-dragging');
+      for (const tb of tabs) if (tb !== tab) tb.tabEl.classList.add('drag-shift');
+    }
+    const { from, rects } = drag;
+    const r = rects[from];
+    // Sekme, sekme sırasının dışına taşamaz
+    const x = Math.max(rects[0].left - r.left, Math.min(rects[rects.length - 1].right - r.right, dx));
+    // Sürüklenen sekmenin kenarı komşusunun ortasını geçince yer değiştirirler
+    // (genişlikler farklı olabildiği için ortaları değil kenarı karşılaştırıyoruz; en uca dayanınca da çalışır)
+    const mid = (k) => rects[k].left + rects[k].width / 2;
+    let to = from;
+    for (let k = from + 1; k < rects.length; k++) if (r.right + x > mid(k)) to = k;
+    for (let k = from - 1; k >= 0; k--) if (r.left + x < mid(k)) to = k;
+    drag.to = to;
+    const w = r.width + TAB_GAP;
+    tabs.forEach((tb, k) => {
+      if (tb === tab) return;
+      const shift = k > from && k <= to ? -w : k < from && k >= to ? w : 0;
+      tb.tabEl.style.transform = shift ? `translateX(${shift}px)` : '';
+    });
+    tab.tabEl.style.transform = `translateX(${x}px)`;
+  };
+  const up = () => {
+    window.removeEventListener('mousemove', move, true);
+    window.removeEventListener('mouseup', up, true);
+    if (!drag) return;
+    const { from, to } = drag;
+    const before = tab.tabEl.getBoundingClientRect().left;
+    // Diğer sekmeler zaten yeni yerlerinde duruyor; kaydırmayı silip sırayı gerçekten değiştirince yerinden oynamazlar
+    for (const tb of tabs) { tb.tabEl.classList.remove('drag-shift'); tb.tabEl.style.transform = ''; }
+    tab.tabEl.classList.remove('dragging');
+    document.body.classList.remove('tab-dragging');
+    if (to !== from && tabs[from] === tab) {
+      tabs.splice(from, 1);
+      tabs.splice(to, 0, tab);
+      if (to < tabs.length - 1) tabsEl.insertBefore(tab.tabEl, tabs[to + 1].tabEl);
+      else tabs[to - 1].tabEl.after(tab.tabEl);
+    }
+    // Bırakılan sekme bulunduğu yerden yuvasına kayar
+    const after = tab.tabEl.getBoundingClientRect().left;
+    if (Math.abs(before - after) > 1) {
+      tab.tabEl.animate([{ transform: `translateX(${before - after}px)` }, { transform: 'none' }],
+        { duration: 160, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    }
+  };
+  window.addEventListener('mousemove', move, true);
+  window.addEventListener('mouseup', up, true);
 }
 
 // Panelin adı: programın koyduğu başlık, yoksa kabuğun adı ("Komut İstemi" gibi adlar çevrilir)
@@ -932,6 +1006,7 @@ async function splitPane(dir, before = false) {
   if (!pane) return;
   const cwd = (settings.splitSameDir && paneCwd(pane)) || startCwd();
   const fresh = new Pane(tab);
+  fresh.openedFrom = pane;
   const split = before ? new Split(dir, fresh, pane) : new Split(dir, pane, fresh);
   replaceNode(pane, split);
   split.mount();
@@ -961,6 +1036,34 @@ function closePane(pane) {
   leaves(tab.root).forEach((p) => p.fitSoon());
 }
 
+// ---------- Yeni açılan terminali geri alma (Ctrl+Z) ----------
+// Yeni açılan terminale henüz hiçbir şey yazılmadıysa Ctrl+Z onu kapatıp açıldığı yere döner.
+// Yazıldıysa ya da başka bir terminaldeysen null döner ve Ctrl+Z programa gider (PowerShell'de geri alma vb.)
+function undoTarget() {
+  const pane = activeTab?.activePane;
+  if (!pane || pane.touched || !pane.openedFrom) return null;
+  const from = pane.openedFrom;
+  if (from instanceof Pane) {
+    // Bölünerek açılmış ve bölündüğü panel hâlâ aynı sekmede duruyor
+    return pane.parent instanceof Split && from.tab === pane.tab && leaves(pane.tab.root).includes(from) ? pane : null;
+  }
+  // Yeni sekme: sekmede tek başına duruyor ve önceki sekme hâlâ açık
+  return pane.parent === pane.tab && tabs.includes(from) ? pane : null;
+}
+
+function undoOpen() {
+  const pane = undoTarget();
+  if (!pane) return;
+  const from = pane.openedFrom;
+  if (from instanceof Pane) {
+    closePane(pane);
+    focusPane(from);
+  } else {
+    closeTab(pane.tab);
+    activateTab(from);
+  }
+}
+
 // ---------- Gizli paneller ----------
 // Gizlenen panel kapanmaz: kabuğu arka planda çalışmaya devam eder
 const hiddenPanes = [];
@@ -977,6 +1080,7 @@ function hidePane(pane) {
   pane.fx.hideHint();
   pane.parent = null;
   pane.tab = null;
+  pane.openedFrom = null;   // gizlenip geri açılan panel Ctrl+Z ile kapanmasın
   pane.hiddenAt = new Date();
   pane.hiddenFrom = tab.titleEl.textContent;
   hiddenPanes.push(pane);
@@ -1022,8 +1126,9 @@ function renderHidden() {
   btn.hidden = hiddenPanes.length === 0;
   $('hiddenCount').textContent = hiddenPanes.length;
   const list = $('hiddenList');
-  list.innerHTML = '';
+  // Son gizli terminal de açıldıysa panel kapanır; kapanırken boş görünmesin diye liste silinmez
   if (!hiddenPanes.length) { closePopovers(); return; }
+  list.innerHTML = '';
   for (const p of hiddenPanes) {
     const row = document.createElement('div');
     row.className = 'hidden-item' + (p.attention ? ' attention' : '');
@@ -1088,6 +1193,7 @@ const RUN = {
     else if (activeTab?.activePane) closePane(activeTab.activePane);
   },
   hidePane: () => activeTab?.activePane && hidePane(activeTab.activePane),
+  undoOpen: () => undoOpen(),
   nextTab: () => cycleTab(1),
   prevTab: () => cycleTab(-1),
   settings: () => openSettings(),
@@ -1129,6 +1235,7 @@ window.addEventListener('keydown', (e) => {
   const action = combo && keyMap.get(combo);
   if (!action) return;
   if (action.term && !e.target.closest?.('.xterm')) return;
+  if (action.id === 'undoOpen' && !undoTarget()) return;   // geri alınacak terminal yoksa Ctrl+Z programa gitsin
   e.preventDefault();
   e.stopPropagation();
   if (!e.repeat || REPEATS.has(action.id)) RUN[action.id]();
@@ -1170,9 +1277,28 @@ window.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 // ---------- Açılır menüler ----------
+// Açılır paneller (kabuk menüsü, gizli terminaller, kısayollar) düğmesinden doğru büyüyerek açılır,
+// kapanırken küçülüp soluklaşır. Kapanış animasyonu sürerken panel "kapalı" sayılır
+const POP_OUT_MS = 120;
+const popoverOpen = (p) => !p.classList.contains('hidden') && !p.classList.contains('pop-out');
+
+function showPopover(p) {
+  clearTimeout(p._hideTimer);
+  p.classList.remove('hidden', 'pop-out');
+  animate(p, 'pop-in');
+}
+
+function hidePopover(p) {
+  if (!popoverOpen(p)) return false;
+  p.classList.remove('pop-in');
+  p.classList.add('pop-out');
+  p._hideTimer = setTimeout(() => { p.classList.remove('pop-out'); p.classList.add('hidden'); }, POP_OUT_MS);
+  return true;
+}
+
 function closePopovers() {
   let any = KUI.closeMenus();
-  for (const p of document.querySelectorAll('.popover:not(.hidden)')) { p.classList.add('hidden'); any = true; }
+  for (const p of document.querySelectorAll('.popover')) if (hidePopover(p)) any = true;
   document.querySelectorAll('.icon-btn.on, .hidden-chip.on').forEach((b) => b.classList.remove('on'));
   if (any) activeTab?.activePane?.term.focus();
   return any;
@@ -1181,10 +1307,11 @@ function closePopovers() {
 let popoverAnchor = null; // açık panel ve onu açan düğme: { panel, button, alignRight }
 
 function togglePopover(panel, button, alignRight) {
-  const wasOpen = !panel.classList.contains('hidden');
+  const wasOpen = popoverOpen(panel);
   closePopovers();
   if (wasOpen) return;
-  panel.classList.remove('hidden');
+  panel.style.transformOrigin = alignRight ? 'top right' : 'top left';
+  showPopover(panel);
   button.classList.add('on');
   popoverAnchor = { panel, button, alignRight };
   placePopover();
