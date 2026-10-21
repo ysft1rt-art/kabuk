@@ -16,6 +16,8 @@
 
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
 const { execFile } = require('child_process');
 
 const DIR = __dirname;
@@ -59,13 +61,33 @@ function detectClis(envPath = process.env.PATH || '') {
 
 // ---------- PowerShell ----------
 const psq = (s) => `'${String(s).replace(/'/g, "''")}'`;
+// Yalnızca kısa komutlar için (yönetici penceresine giden tek satır). Base64 komutu ~2,7 kat uzatır
 const encode = (script) => Buffer.from(`$ProgressPreference='SilentlyContinue'\n${script}`, 'utf16le').toString('base64');
 
+// Betik geçici bir dosyaya yazılır, komut satırına yalnızca "bu dosyayı oku ve çalıştır" gider.
+// Betiği doğrudan komut satırına gömünce (-EncodedCommand) çok araç kurulu bilgisayarlarda Windows'un
+// 32.767 karakterlik sınırı aşılıyordu (spawn ENAMETOOLONG; 5 araçta sınırdaydı).
+// -File yerine scriptblock: şirket bilgisayarlarında grup ilkesi betik dosyası çalıştırmayı yasaklamış olabilir
 function powershell(script, timeout = 90000) {
   return new Promise((resolve) => {
-    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encode(script)],
-      { windowsHide: true, timeout },
-      (err, stdout, stderr) => resolve({ ok: !err, out: String(stdout || '').trim(), err: String(stderr || (err && err.message) || '').trim() }));
+    const file = path.join(os.tmpdir(), `kabuk-menu-${process.pid}-${crypto.randomUUID()}.ps1`);
+    try {
+      fs.writeFileSync(file, script, 'utf8');
+    } catch (err) {
+      resolve({ ok: false, out: '', err: String(err) });
+      return;
+    }
+    // Çıktı UTF-8 olsun: yoksa Türkçe hata mesajları Ayarlar'da bozuk harflerle görünür
+    const boot = `[Console]::OutputEncoding = [Text.Encoding]::UTF8
+& ([scriptblock]::Create([IO.File]::ReadAllText(${psq(file)}, [Text.Encoding]::UTF8)))`;
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encode(boot)],
+      { windowsHide: true, timeout, encoding: 'utf8' },
+      (err, stdout, stderr) => {
+        try { fs.rmSync(file, { force: true }); } catch {}
+        // Hata mesajında komut satırının tamamı (uzun base64) olmasın
+        const msg = String(stderr || '').trim() || (err ? (err.killed ? 'zaman aşımı' : `çıkış kodu ${err.code}`) : '');
+        resolve({ ok: !err, out: String(stdout || '').trim(), err: msg });
+      });
   });
 }
 
