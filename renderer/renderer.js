@@ -34,6 +34,7 @@ const DEFAULTS = {
   copyOnSelect: false,
   rightClick: true,
   customShells: [],    // { id, name, file, args: [] }
+  aliases: [],         // takma adlar: { name: 'dtop', command: 'cd C:\\Users\\remix' } (expandAlias)
   keys: {},            // değiştirilen kısayollar: { işlem: ['Ctrl+Shift+T', ...] } (keys.js)
   // Bildirimler: bir program dikkat istediğinde (Claude Code bitti / onay bekliyor)
   notify: true,
@@ -420,20 +421,32 @@ class Pane {
     this.hintSoon();
   }
 
-  // Yazılan satırı takip eder. Enter'a basıldığında satır bir eğlence kelimesiyse
-  // Enter'ı tutar (true döner) ve tryFun'a bırakır
+  // Yazılan satırı takip eder. Enter'a basıldığında satır bir takma ad ya da eğlence kelimesiyse
+  // Enter'ı tutar (true döner) ve tryLine'a bırakır
   trackInput(d) {
     if (d === '\r') {
       const typed = this.typed, ok = this.typedOk;
       this.typed = '';
       this.typedOk = true;
+      const command = ok ? expandAlias(typed) : null;
+      if (command) {
+        // Yazılan takma ad silinir, yerine asıl komut yazılıp çalıştırılır
+        this.tryLine(typed, () => {
+          api.write(this.ptyId, '\x7f'.repeat([...typed].length) + command + '\r');
+          this.everTyped = true;
+        });
+        return true;
+      }
       const scene = settings.fun && ok ? funScene(typed) : null;
       if (!scene) {
         // Kabuğa bir komut gidiyor (Tab ile tamamlanan satır da olabilir, o yüzden ekrana da bakılır)
         if (typed.trim() || !this.atEmptyPrompt()) this.everTyped = true;
         return false;
       }
-      this.tryFun(typed, scene);
+      this.tryLine(typed, () => {
+        api.write(this.ptyId, '\x7f'.repeat([...typed].length));
+        this.fx.play(scene);
+      });
       return true;
     }
     if (d === '\x7f' || d === '\b') { this.typed = [...this.typed].slice(0, -1).join(''); return false; }
@@ -448,8 +461,9 @@ class Pane {
 
   // Karar Enter anında ekrana bakılarak verilir: satır "komut istemi + yazılan kelime" ise animasyon oynar,
   // değilse Enter kabuğa normal gider. Hızlı yazınca kabuk son harfleri ekrana henüz basmamış olabilir;
-  // o yüzden en fazla 400 ms bekler (bekleme yalnızca bir eğlence kelimesi yazıldığında olur)
-  tryFun(typed, scene) {
+  // o yüzden en fazla 400 ms bekler (bekleme yalnızca bir eğlence kelimesi veya takma ad yazıldığında olur).
+  // Takma adlar da aynı yoldan geçer: istemin arkasına yazılmadıysa (bir programın içindeyken) dokunulmaz
+  tryLine(typed, onYes) {
     this.held = [];
     const start = performance.now();
     const check = () => {
@@ -459,8 +473,7 @@ class Pane {
       this.held = null;
       if (!this.ptyId) return;
       if (state === 'yes') {
-        api.write(this.ptyId, '\x7f'.repeat([...typed].length));
-        this.fx.play(scene);
+        onYes();
       } else {
         api.write(this.ptyId, '\r');
         this.everTyped = true;
@@ -1069,6 +1082,16 @@ function paneCwd(pane) {
 }
 
 // Komut önerileri hangi kabuğun komutlarıyla gösterilsin
+// Takma ad: satırın ilk kelimesi bir takma adsa asıl komutu döner; arkasındaki yazılar komutun sonuna eklenir
+// ("gs -s" → "git status -s"). Büyük/küçük harf fark etmez
+function expandAlias(typed) {
+  const m = typed.trim().match(/^(\S+)(.*)$/s);
+  if (!m) return null;
+  const word = m[1].toLocaleLowerCase('tr');
+  const a = settings.aliases.find((x) => x.name.toLocaleLowerCase('tr') === word);
+  return a ? a.command + m[2] : null;
+}
+
 function shellKind(pane) {
   const id = pane.shellId;
   if (id === 'cmd') return 'cmd';
@@ -1760,6 +1783,37 @@ function renderSettings() {
     }
     list.appendChild(row);
   }
+  renderAliases();
+}
+
+function renderAliases() {
+  const list = $('aliasList');
+  list.innerHTML = '';
+  for (const a of settings.aliases) {
+    const row = document.createElement('div');
+    row.className = 'set-row shell-row';
+    row.innerHTML = `
+      <div class="set-label"><div class="set-name set-mono"></div><div class="set-desc set-mono"></div></div>
+      <button class="set-btn small"></button>
+      <button class="set-btn danger small"></button>`;
+    row.querySelector('.set-name').textContent = a.name;
+    row.querySelector('.set-desc').textContent = a.command;
+    const [edit, del] = row.querySelectorAll('button');
+    // Düzenle: kutulara geri koyar; aynı adla "Ekle" eskisinin yerine geçer
+    edit.textContent = t('Düzenle');
+    edit.onclick = () => {
+      $('newAliasName').value = a.name;
+      $('newAliasCommand').value = a.command;
+      $('newAliasCommand').focus();
+    };
+    del.textContent = t('Kaldır');
+    del.onclick = () => {
+      settings.aliases = settings.aliases.filter((x) => x !== a);
+      saveSettings();
+      renderAliases();
+    };
+    list.appendChild(row);
+  }
 }
 
 // Ayarı kaydet, terminallere uygula, sayfayı tazele
@@ -1817,10 +1871,30 @@ $('addShell').onclick = async () => {
   renderSettings();
   showToast(t('"{name}" eklendi. Yeni sekme menüsünden açabilirsin.', { name: settings.customShells.at(-1).name }));
 };
+function addAlias() {
+  const name = $('newAliasName').value.trim();
+  const command = $('newAliasCommand').value.trim();
+  const err = $('addAliasError');
+  if (!name) { err.textContent = t('Takma ad için bir ad yaz.'); return; }
+  if (/\s/.test(name)) { err.textContent = t('Ad tek kelime olmalı (boşluk olmadan).'); return; }
+  if (!command) { err.textContent = t('Çalışacak komutu yaz.'); return; }
+  err.textContent = '';
+  const key = name.toLocaleLowerCase('tr');
+  const replaced = settings.aliases.some((x) => x.name.toLocaleLowerCase('tr') === key);
+  settings.aliases = [...settings.aliases.filter((x) => x.name.toLocaleLowerCase('tr') !== key), { name, command }];
+  saveSettings();
+  $('newAliasName').value = $('newAliasCommand').value = '';
+  renderAliases();
+  showToast(t(replaced ? '"{name}" güncellendi.' : '"{name}" eklendi. Terminalde yazıp Enter\'a bas.', { name }));
+}
+$('addAlias').onclick = addAlias;
+for (const id of ['newAliasName', 'newAliasCommand']) {
+  $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') addAlias(); });
+}
 $('resetSettings').onclick = async () => {
   const ok = await KUI.confirm({
     title: t('Tüm ayarlar sıfırlansın mı?'),
-    message: t('Tema, yazı tipi ve diğer bütün ayarlar varsayılana döner. Eklediğin kabuklar da silinir.'),
+    message: t('Tema, yazı tipi ve diğer bütün ayarlar varsayılana döner. Eklediğin kabuklar ve takma adlar da silinir.'),
     ok: t('Sıfırla'),
     danger: true,
   });

@@ -183,9 +183,16 @@ Tıklamaları **gerçek fare olaylarıyla** test et: `webContents.sendInputEvent
 
 Varsayılan açık (`settings.fun`). Diğer varsayılanlar: tema modu Otomatik, buzlu cam açık, yoğunluk %80
 (`DEFAULTS` renderer.js; varsayılan değişince `v` artırılıp eski kayıttan o anahtarlar silinir). Açıkken boş komut satırına `kedi`, `köpek` vb. yazıp Enter'a basınca animasyon
-oynar (`renderer/fun.js`). Karar Enter anında ekrana bakılarak verilir (`tryFun`): satır "komut istemi + kelime"
+oynar (`renderer/fun.js`). Karar Enter anında ekrana bakılarak verilir (`tryLine`): satır "komut istemi + kelime"
 değilse Enter kabuğa normal gider. Alt satıra taşan uzun istemler birleştirilir (`lineBeforeCursor`). Kelimeler
 büyük/küçük harf ve Türkçe harf farkı gözetmeden eşleşir (`funScene`).
+
+## Takma adlar
+
+Ayarlar > Takma adlar (`settings.aliases`: `{ name, command }`). Enter'da satırın ilk kelimesi bir takma adsa
+(`expandAlias`, büyük/küçük harf fark etmez) eğlence kelimeleriyle aynı yoldan (`tryLine`) ekrana bakılır: satır
+"komut istemi + yazılan" ise yazılan silinip yerine asıl komut + arkasına yazılanlar gönderilir; değilse (ör. bir
+programın içindeyken) Enter normal gider. Kabuktan bağımsız çalışır (PowerShell, cmd, bash).
 
 ## Komut önerileri
 

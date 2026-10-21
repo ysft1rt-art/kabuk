@@ -103,6 +103,9 @@
       <button data-sec="secShells">
         <svg viewBox="0 0 16 16"><path d="M8 2l6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3"/></svg>Kabuklar
       </button>
+      <button data-sec="secAliases">
+        <svg viewBox="0 0 16 16"><path d="M2.5 5.5h7M2.5 10.5h4M11 8.5l2.5 2-2.5 2M13.5 10.5H9"/></svg>Takma adlar
+      </button>
       <button data-sec="secUpdate">
         <svg viewBox="0 0 16 16"><path d="M13.2 6.5A5.3 5.3 0 0 0 3.3 5.2M2.8 9.5a5.3 5.3 0 0 0 9.9 1.3M3.3 2.6v2.6h2.6M12.7 13.4v-2.6h-2.6"/></svg>Güncellemeler
       </button>
@@ -419,6 +422,29 @@ notification_method = "osc9"</div></div>
                   <div class="set-inline end">
                     <span id="addShellError" class="set-error"></span>
                     <button id="addShell" class="set-btn primary">Ekle</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="secAliases">
+            <h2>Takma adlar</h2>
+            <div class="set-card">
+              <div id="aliasList"></div>
+              <div class="set-row wrap add-alias">
+                <div class="set-label">
+                  <div class="set-name">Takma ad ekle</div>
+                  <div class="set-desc">Uzun bir komuta kısa bir ad ver. Terminalde adı yazıp Enter'a basınca asıl komut çalışır; adın arkasına yazdıkların komutun sonuna eklenir. Aynı adı yeniden eklersen eskisinin yerine geçer.</div>
+                </div>
+                <div class="set-sub add-grid">
+                  <div class="set-inline">
+                    <input id="newAliasName" class="set-input alias-name" spellcheck="false" autocomplete="off" placeholder="Ad (örn. dtop)">
+                    <input id="newAliasCommand" class="set-input" spellcheck="false" autocomplete="off" placeholder="Komut (örn. cd C:\Projeler)">
+                  </div>
+                  <div class="set-inline end">
+                    <span id="addAliasError" class="set-error"></span>
+                    <button id="addAlias" class="set-btn primary">Ekle</button>
                   </div>
                 </div>
               </div>

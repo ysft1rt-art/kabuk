@@ -549,7 +549,8 @@ body.light .multi .pane:not(.focused)::after { background: rgba(255, 255, 255, .
 }
 .set-row[hidden] { display: none; }
 .set-row.wrap { flex-wrap: wrap; }
-.set-card .set-row + .set-row, #shellList + .set-row, #shellList .set-row + .set-row { border-top: 1px solid var(--border); }
+.set-card .set-row + .set-row, #shellList + .set-row, #shellList .set-row + .set-row,
+#aliasList + .set-row, #aliasList .set-row + .set-row { border-top: 1px solid var(--border); }
 .set-label { flex: 1; min-width: 200px; }
 .set-name { font-size: 13.5px; }
 .set-desc { margin-top: 2px; font-size: 12px; color: var(--dim); }
@@ -569,6 +570,7 @@ body.light .multi .pane:not(.focused)::after { background: rgba(255, 255, 255, .
 .set-inline.end { justify-content: flex-end; }
 .set-inline .set-input { flex: 1; }
 .add-grid { display: grid; gap: 8px; }
+.set-inline .set-input.alias-name { flex: 0 0 140px; }
 
 .set-input {
   min-width: 0;
