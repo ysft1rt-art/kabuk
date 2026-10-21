@@ -95,7 +95,7 @@ const SYSTEM_FONTS = [
   'Cascadia Mono', 'Cascadia Code', 'Consolas', 'Lucida Console', 'Courier New',
   'Hack', 'Iosevka', 'IBM Plex Mono', 'Roboto Mono', 'Ubuntu Mono', 'Inconsolata',
   'Victor Mono', 'Fantasque Sans Mono', 'Comic Mono', 'CaskaydiaCove Nerd Font',
-  'JetBrainsMono Nerd Font', 'MesloLGS NF', 'Monaspace Neon', 'Commit Mono',
+  'JetBrainsMono Nerd Font', 'MesloLGS NF', 'Monaspace Neon', 'Commit Mono', 'Anthropic Sans',
 ];
 let FONTS = [...BUNDLED_FONTS];
 
