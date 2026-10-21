@@ -169,7 +169,7 @@ const EN = {
   'Devam et': 'Continue',
   'Yönetici onayı verilmedi; menü "Diğer seçenekleri göster" altında kalmaya devam ediyor.': 'Administrator approval wasn\'t given; the menu stays under "Show more options".',
   'İmza eklenemedi. Tekrar dene.': 'Couldn\'t add the signature. Try again.',
-  'Windows 11 sağ tık menüsünde açık.': 'On in the Windows 11 right-click menu.',
+  'Windows 11 sağ tık menüsünde ve "Diğer seçenekleri göster" altında açık.': 'On in the Windows 11 right-click menu and under "Show more options".',
   'Yeni menüye eklenemedi; "Diğer seçenekleri göster" altında açık.': 'Couldn\'t be added to the new menu; it\'s under "Show more options".',
   'Menüye eklenemedi: {error}': 'Couldn\'t be added to the menu: {error}',
   'Bu modda kapalı.': 'Off in this mode.',

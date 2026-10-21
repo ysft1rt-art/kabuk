@@ -65,8 +65,8 @@ hem Kabuk bu dosyayı okur. Yeni araç = bir satır.
   `KabukMenu.cer`'e yazar. Windows'un güvenmesi için kullanıcı Ayarlar > Başlangıç'taki **"Windows 11 menüsüne
   ekle"** düğmesine basar (`menu.trust()`: UAC ile `LocalMachine\TrustedPeople`'a ekler). Bunu Claude yapmaz/test
   etmez: güvenlik ayarı, kullanıcının onayı.
-- **Eski menü (yedek):** güven yoksa HKCU `Directory\shell`, `Directory\Background\shell`, `Drive\shell` altına
-  kayıt defteri girdileri ("Diğer seçenekleri göster"). Kısa menü kuruluyken eskisi silinir (iki kez görünmesin).
+- **Eski menü:** HKCU `Directory\shell`, `Directory\Background\shell`, `Drive\shell` altına kayıt defteri girdileri
+  ("Diğer seçenekleri göster"). Kullanıcı isteği: kısa menü kuruluyken de **her zaman** yazılır (ikisinde birden olsun).
 - `contextmenu/menu.js` kurulum/kaldırma/durum (Electron'suz, doğrudan test edilebilir); main.js açılışta ve ayar
   değişince `settings.contextMenu`'ye göre eşitler (HEADLESS'ta hiç dokunmaz).
 - Tıklayınca: `electron.exe "<kabuk>" [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"`. Kabuk tek kopya çalışır

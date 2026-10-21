@@ -763,7 +763,7 @@ function renderMenuStatus() {
   const s = menuStatus;
   const texts = {
     working: t('Ayarlanıyor…'),
-    modern: t('Windows 11 sağ tık menüsünde açık.'),
+    modern: t('Windows 11 sağ tık menüsünde ve "Diğer seçenekleri göster" altında açık.'),
     classic: s.needsTrust
       ? t('Şimdilik "Diğer seçenekleri göster" altında. Kısa menüde de görünmesi için aşağıdaki düğmeye bas.')
       : t('Yeni menüye eklenemedi; "Diğer seçenekleri göster" altında açık.'),
