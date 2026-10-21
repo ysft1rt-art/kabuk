@@ -16,6 +16,10 @@ contextBridge.exposeInMainWorld('kabuk', {
   onConfirmClose: (cb) => ipcRenderer.on('window:confirmClose', (_e, count) => cb(count)),
   syncSettings: (s) => ipcRenderer.invoke('settings:apply', s),
   getPaths: () => ipcRenderer.invoke('paths:get'),
+  // Oturumu hatırlama: data null ise kayıt silinir
+  saveSession: (data) => ipcRenderer.sendSync('session:save', data),
+  loadSession: () => ipcRenderer.invoke('session:load'),
+  sessionSize: () => ipcRenderer.invoke('session:size'),
   pickFolder: (current) => ipcRenderer.invoke('dialog:folder', current),
   pickProgram: () => ipcRenderer.invoke('dialog:program'),
   notify: (opts) => ipcRenderer.send('notify', opts),

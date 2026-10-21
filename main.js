@@ -298,6 +298,24 @@ ipcMain.handle('settings:apply', (_e, s) => {
   }
 });
 
+// ---------- Oturumu hatırlama ----------
+// Kapanırken açık sekmeler, paneller, klasörler ve ekran yazıları session.json'a yazılır (Ayarlar > Başlangıç),
+// açılışta renderer geri yükler. Kapanış anında kaydedildiği için yazma eşzamanlı (sendSync)
+const sessionPath = () => path.join(app.getPath('userData'), 'session.json');
+ipcMain.on('session:save', (e, data) => {
+  try {
+    if (data) fs.writeFileSync(sessionPath(), JSON.stringify(data));
+    else fs.rmSync(sessionPath(), { force: true });
+  } catch {}
+  e.returnValue = true;
+});
+ipcMain.handle('session:load', () => {
+  try { return JSON.parse(fs.readFileSync(sessionPath(), 'utf8')); } catch { return null; }
+});
+ipcMain.handle('session:size', () => {
+  try { return fs.statSync(sessionPath()).size; } catch { return 0; }
+});
+
 ipcMain.handle('launch:take', () => { const r = initialLaunch; initialLaunch = null; return r; });
 ipcMain.handle('menu:status', () => menuStatus);
 

@@ -219,3 +219,13 @@ Ayar `settings.lang` (boşsa Windows'un dili); dil değişince `applyLanguage()`
 gider (main.js `mt()`: klasör seçme pencereleri ve uyarılar). Yeni yazı = Türkçesini `t()` ile yaz + `EN`'e İngilizcesini ekle.
 Değişken adı olarak `t` kullanma: çeviri fonksiyonunu gölgeler.
 Kontrol: İngilizce açıkken `i18nMissing()` çevirisi eksik metinleri listeler.
+
+## Oturumu hatırlama
+
+Ayarlar > Başlangıç > "Kapanınca sekmeleri hatırla" (`settings.restoreSession`, varsayılan açık). Kapanırken
+(`beforeunload`, ayrıca 2 dakikada bir) `sessionSnapshot()` sekmeleri, bölme ağacını (yön + oran), her panelin kabuğunu,
+klasörünü (`paneCwd`) ve son 1000 satırını (`@xterm/addon-serialize`, renkli) `session.json`'a yazar (main.js
+`session:save`, eşzamanlı). Açılışta `restoreSession()` aynı düzeni kurar, eski yazıları basıp altına "Önceki oturum"
+çizgisi koyar, kabukları aynı klasörde başlatır. Çalışan programlar, gizli paneller ve Ayarlar sekmesi geri gelmez.
+"Kabuk ile aç" ile açılırsa oturum yüklenir + istenen klasörde ayrıca yeni sekme açılır. Son sekme kapatılınca kayıt
+silinir (boş oturum). "Temizle" düğmesi dosyayı siler ve bu açılışı kaydetmez (`sessionCleared`); ayar kapatılınca da silinir.

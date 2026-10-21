@@ -175,6 +175,20 @@
               </div>
               <div class="set-row">
                 <div class="set-label">
+                  <div class="set-name">Kapanınca sekmeleri hatırla</div>
+                  <div class="set-desc">Kabuk kapanırken açık sekmeler, bölünmüş paneller, klasörler ve ekrandaki yazılar saklanır. Bir sonraki açılışta kaldığın yerden devam edersin.</div>
+                </div>
+                <button id="setRestoreSession" class="kswitch"></button>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
+                  <div class="set-name">Kayıtlı oturumu temizle</div>
+                  <div class="set-desc"><span>Saklanan sekmeleri ve ekran yazılarını siler.</span> <span id="sessionSize"></span></div>
+                </div>
+                <button id="clearSession" class="set-btn danger">Temizle</button>
+              </div>
+              <div class="set-row">
+                <div class="set-label">
                   <div class="set-name">Sağ tık menüsünde "Kabuk ile aç"</div>
                   <div class="set-desc">Bir klasöre sağ tıklayınca Kabuk'u o klasörde açar. Bilgisayarda kurulu yapay zekâ araçları (Claude Code, Codex…) varsa onlarla doğrudan da açabilirsin.</div>
                   <div id="menuStatus" class="set-desc menu-status"></div>
@@ -499,6 +513,7 @@ notification_method = "osc9"</div></div>
   <script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
   <script src="../node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
   <script src="../node_modules/@xterm/addon-unicode11/lib/addon-unicode11.js"></script>
+  <script src="../node_modules/@xterm/addon-serialize/lib/addon-serialize.js"></script>
   <script src="vendor/addon-webgl.js"></script>
   <script src="i18n.js"></script>
   <script src="ui.js"></script>

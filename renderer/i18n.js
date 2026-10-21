@@ -41,7 +41,7 @@ const i18nMissing = () => [...I18N_MISSING];
 // Kodun kendisinin doldurduğu yerler (zaten t() ile yazılıyor) ve terminaller atlanır
 const I18N_SKIP = [
   '#tabs', '.pane', '#helpKeys', '#hiddenList', '#shellMenu', '#keyGroups', '#shellList', '#hiddenCount',
-  '#startDirFixed', '#menuStatus', '#updateLabel', '#updateVer', '#updateSub', '#updateNotes', '#updateVersion', '#updateStatus',
+  '#startDirFixed', '#sessionSize', '#menuStatus', '#updateLabel', '#updateVer', '#updateSub', '#updateNotes', '#updateVersion', '#updateStatus',
   '#updateCheck', '#updateInstall', '#fontPreview', '#fontSizeLabel', '#addShellError', '#aliasList', '#addAliasError', '#setLang', '.set-path', '.kselect',
   '.kslider-host', '.kmenu', '.ktip', '.kmodal-back', '#toast', 'script', 'style', 'svg',
 ].join(', ');
@@ -156,6 +156,17 @@ const EN = {
   'Ekranı kapla': 'Maximized',
   'Son halini hatırla': 'Remember last size',
   'Kapatırken sor': 'Ask before closing',
+  'Kapanınca sekmeleri hatırla': 'Remember tabs on close',
+  'Kabuk kapanırken açık sekmeler, bölünmüş paneller, klasörler ve ekrandaki yazılar saklanır. Bir sonraki açılışta kaldığın yerden devam edersin.': 'When Kabuk closes, open tabs, split panes, folders and on-screen text are saved. Next time you pick up where you left off.',
+  'Kayıtlı oturumu temizle': 'Clear saved session',
+  'Saklanan sekmeleri ve ekran yazılarını siler.': 'Deletes the saved tabs and on-screen text.',
+  'Temizle': 'Clear',
+  'Kayıtlı oturum yok.': 'No saved session.',
+  'Şu an {size} yer kaplıyor.': 'Currently uses {size}.',
+  'Kayıtlı oturum silinsin mi?': 'Delete the saved session?',
+  'Saklanan sekmeler, klasörler ve ekran yazıları silinir. Kabuk bir sonraki açılışta boş başlar. Şu an açık olan terminaller kapanmaz.': 'Saved tabs, folders and on-screen text are deleted. Kabuk starts fresh next time. Terminals open right now stay open.',
+  'Kayıtlı oturum silindi.': 'Saved session deleted.',
+  'Önceki oturum': 'Previous session',
   'Birden fazla terminal açıkken pencereyi kapatmadan önce onay ister.': 'Asks before closing the window when more than one terminal is open.',
   'Sağ tık menüsünde "Kabuk ile aç"': '"Open in Kabuk" in the right-click menu',
   'Bir klasöre sağ tıklayınca Kabuk\'u o klasörde açar. Bilgisayarda kurulu yapay zekâ araçları (Claude Code, Codex…) varsa onlarla doğrudan da açabilirsin.':

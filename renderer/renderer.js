@@ -26,6 +26,7 @@ const DEFAULTS = {
   splitSameDir: true,  // bölünen panel, bulunduğun klasörde açılır
   startMode: 'normal', // pencere: normal / maximized / remember
   confirmClose: true,
+  restoreSession: true, // kapanınca sekmeleri, panelleri ve ekran yazılarını hatırla (session.json)
   contextMenu: true,   // Windows sağ tık menüsünde "Kabuk ile aç" (main.js kurar)
   // Terminal
   cursorStyle: 'bar',
@@ -327,6 +328,9 @@ class Pane {
     this.term.loadAddon(this.fit);
     this.term.loadAddon(new WebLinksAddon.WebLinksAddon((_e, url) => api.openLink(url)));
     this.term.loadAddon(new Unicode11Addon.Unicode11Addon());
+    // Ekrandaki yazıları renkleriyle metne çevirir (oturumu hatırlama)
+    this.serializer = new SerializeAddon.SerializeAddon();
+    this.term.loadAddon(this.serializer);
     this.term.unicode.activeVersion = '11';
     this.term.open(host);
     this.host = host;
@@ -784,6 +788,89 @@ async function newTab(shellId = settings.shell, existingPane = null, cwd = undef
   else await pane.start(shellId, cwd);
   return tab;
 }
+
+// ---------- Oturumu hatırlama ----------
+// Kapanırken (ve iki dakikada bir) sekmeler, bölünmüş paneller, her panelin kabuğu, klasörü ve ekrandaki
+// son yazıları kaydedilir; açılışta aynı düzen kurulur, eski yazılar ekrana basılır, kabuklar aynı klasörde
+// yeniden başlar. Çalışan programlar geri gelmez. Gizli paneller ve Ayarlar sekmesi kaydedilmez
+const SESSION_LINES = 1000;   // panel başına saklanan en fazla satır
+let sessionCleared = false;   // "Temizle" basıldı: bu açılış kaydedilmez, sonraki açılış boş başlar
+
+function paneSnapshot(p) {
+  let buffer = '';
+  try { buffer = p.serializer.serialize({ scrollback: SESSION_LINES, excludeAltBuffer: true, excludeModes: true }); } catch {}
+  return { shellId: p.shellId || settings.shell, cwd: paneCwd(p) || null, buffer };
+}
+function nodeSnapshot(node) {
+  if (node instanceof Pane) return { pane: paneSnapshot(node) };
+  return { split: node.dir, ratio: node.ratio, a: nodeSnapshot(node.a), b: nodeSnapshot(node.b) };
+}
+function sessionSnapshot() {
+  const list = tabs.filter((tb) => tb !== settingsTab && tb.root);
+  if (!list.length) return null;
+  return {
+    v: 1,
+    savedAt: Date.now(),
+    active: Math.max(0, list.indexOf(activeTab)),
+    tabs: list.map((tb) => ({ root: nodeSnapshot(tb.root), focus: Math.max(0, leaves(tb.root).indexOf(tb.activePane)) })),
+  };
+}
+function saveSession() {
+  if (!settings.restoreSession || sessionCleared) return;
+  try { api.saveSession(sessionSnapshot()); } catch {}
+}
+
+// Kayıttaki ağacı (panel / bölme) kurar; panelleri ve kayıttaki bilgilerini out'a ekler
+function buildNode(data, tab, out) {
+  if (data?.split) {
+    const a = buildNode(data.a, tab, out);
+    const b = buildNode(data.b, tab, out);
+    const split = new Split(data.split === 'column' ? 'column' : 'row', a, b);
+    split.ratio = Math.min(0.9, Math.max(0.1, Number(data.ratio) || 0.5));
+    split.mount();
+    return split;
+  }
+  const pane = new Pane(tab);
+  out.push({ pane, info: data?.pane || {} });
+  return pane;
+}
+
+async function restoreSession() {
+  if (!settings.restoreSession) return false;
+  const s = await api.loadSession();
+  if (!s || s.v !== 1 || !Array.isArray(s.tabs) || !s.tabs.length) return false;
+  const when = new Date(s.savedAt || Date.now()).toLocaleString(LANG === 'en' ? 'en-GB' : 'tr-TR',
+    { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const made = [];
+  const starts = [];
+  for (const saved of s.tabs) {
+    const tab = makeTab();
+    const list = [];
+    const root = buildNode(saved.root, tab, list);
+    tab.root = root;
+    root.parent = tab;
+    tab.el.appendChild(root.el);
+    tab.activePane = list[saved.focus]?.pane || list[0].pane;
+    activateTab(tab);   // paneller ölçülebilsin diye sekme bir an görünür olur
+    for (const { pane, info } of list) {
+      pane.fitNow();
+      if (info.buffer) {
+        pane.term.write(info.buffer + `\x1b[0m\r\n\x1b[2m── ${t('Önceki oturum')} · ${when} ──\x1b[0m\r\n`);
+        pane.everTyped = true;   // eski yazıların üstünde komut önerileri akmasın
+      }
+      starts.push(pane.start(typeof info.shellId === 'string' ? info.shellId : settings.shell,
+        typeof info.cwd === 'string' && info.cwd ? info.cwd : undefined));
+    }
+    made.push(tab);
+  }
+  activateTab(made[Math.min(Math.max(0, s.active | 0), made.length - 1)]);
+  focusPane(activeTab.activePane);
+  await Promise.all(starts);
+  return true;
+}
+
+window.addEventListener('beforeunload', saveSession);
+setInterval(saveSession, 120000);   // Windows kapanırken vb. kapanış olayı gelmezse diye
 
 // ---------- "Kabuk ile aç" (Windows sağ tık menüsü) ----------
 // req = { dir, run }: klasörde yeni sekme açar; bir araç seçildiyse (claude, codex...) komut istemi
@@ -1679,6 +1766,11 @@ const ui = {
   tips: KUI.toggle($('setTips'), (on) => { settings.tips = on; saveSettings(); forEachPane((p) => p.hintSoon()); }),
   splitSameDir: KUI.toggle($('setSplitSameDir'), (on) => changeSetting('splitSameDir', on)),
   confirmClose: KUI.toggle($('setConfirmClose'), (on) => changeSetting('confirmClose', on)),
+  restoreSession: KUI.toggle($('setRestoreSession'), (on) => {
+    settings.restoreSession = on;
+    saveSettings();
+    if (!on) { api.saveSession(null); renderSessionSize(); }   // kapatınca eski kayıt da silinir
+  }),
   contextMenu: KUI.toggle($('setContextMenu'), (on) => changeSetting('contextMenu', on)),
   cursorBlink: KUI.toggle($('setCursorBlink'), (on) => changeSetting('cursorBlink', on)),
   copyOnSelect: KUI.toggle($('setCopyOnSelect'), (on) => changeSetting('copyOnSelect', on)),
@@ -1761,6 +1853,8 @@ function renderSettings() {
   ui.splitSameDir.setChecked(settings.splitSameDir);
   setSegmented('setStartMode', settings.startMode);
   ui.confirmClose.setChecked(settings.confirmClose);
+  ui.restoreSession.setChecked(settings.restoreSession);
+  renderSessionSize();
   ui.contextMenu.setChecked(settings.contextMenu);
   renderMenuStatus();
 
@@ -1916,6 +2010,28 @@ $('addAlias').onclick = addAlias;
 for (const id of ['newAliasName', 'newAliasCommand']) {
   $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') addAlias(); });
 }
+// Ayarlar > Başlangıç: kayıtlı oturumun diskte kapladığı yer
+async function renderSessionSize() {
+  const size = await api.sessionSize();
+  const el = $('sessionSize');
+  if (sessionCleared || !size) el.textContent = t('Kayıtlı oturum yok.');
+  else el.textContent = t('Şu an {size} yer kaplıyor.', { size: size < 1024 * 1024 ? Math.max(1, Math.round(size / 1024)) + ' KB' : (size / 1024 / 1024).toFixed(1) + ' MB' });
+}
+
+$('clearSession').onclick = async () => {
+  const ok = await KUI.confirm({
+    title: t('Kayıtlı oturum silinsin mi?'),
+    message: t('Saklanan sekmeler, klasörler ve ekran yazıları silinir. Kabuk bir sonraki açılışta boş başlar. Şu an açık olan terminaller kapanmaz.'),
+    ok: t('Temizle'),
+    danger: true,
+  });
+  if (!ok) return;
+  api.saveSession(null);
+  sessionCleared = true;
+  renderSessionSize();
+  showToast(t('Kayıtlı oturum silindi.'));
+};
+
 $('resetSettings').onclick = async () => {
   const ok = await KUI.confirm({
     title: t('Tüm ayarlar sıfırlansın mı?'),
@@ -2139,7 +2255,10 @@ api.onConfirmClose(async (count) => {
   await loadFont();
   api.getMenuStatus().then((s) => { menuStatus = s; renderMenuStatus(); });
   api.getUpdateStatus().then((s) => { update = s; renderUpdate(); });
-  await openRequest(await api.takeLaunch());
+  // Önceki oturum geri yüklenir; "Kabuk ile aç" ile açıldıysa istenen klasörde ayrıca yeni sekme açılır
+  const restored = await restoreSession().catch((err) => { console.error(err); return false; });
+  const req = await api.takeLaunch();
+  if (!restored || req) await openRequest(req);
   // Açılış bitti: sistem yazı tipi listesi boş bir anda doldurulur (Ayarlar > Yazı tipi)
   const fonts = () => { detectFonts(); renderFontControls(); };
   if (window.requestIdleCallback) requestIdleCallback(fonts, { timeout: 2000 }); else setTimeout(fonts, 500);
