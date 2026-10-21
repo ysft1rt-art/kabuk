@@ -372,6 +372,11 @@ class Pane {
 
   async start(shellId, cwd = startCwd()) {
     this.fitNow();
+    // Sekme kabuk başlamayı beklemeden doğru adla açılsın ("Terminal" yazıp sonra genişlemesin)
+    if (!this.shellName) {
+      this.shellName = shells.find((s) => s.id === shellId)?.name || '';
+      if (this.tab) updateTabTitle(this.tab);
+    }
     const { id, name, shellId: realShell, notes } = await api.createPty({ shellId, cwd, cols: this.term.cols, rows: this.term.rows });
     notes?.forEach((n) => showToast(n));
     this.ptyId = id;
@@ -645,6 +650,27 @@ function replaceNode(oldNode, newNode) {
   }
 }
 
+// ---------- Animasyonlar ----------
+// Öğeye animasyon sınıfını ekler, animasyon bitince sınıfı kaldırıp done'ı çağırır.
+// Animasyon hiç oynamazsa (öğe gizliyse) en geç max ms sonra yine biter.
+// Terminal içeren öğelerde yalnızca kaydırma + saydamlık kullan: büyütme (scale) xterm'in harf ölçüsünü bozar
+function animate(el, cls, done, max = 450) {
+  el.classList.remove(cls);
+  void el.offsetWidth;   // aynı sınıf yeniden eklenince animasyon baştan oynasın
+  el.classList.add(cls);
+  let over = false;
+  const end = (e) => {
+    if (over || (e && e.target !== el)) return;
+    over = true;
+    el.removeEventListener('animationend', end);
+    clearTimeout(timer);
+    el.classList.remove(cls);
+    done?.();
+  };
+  el.addEventListener('animationend', end);
+  const timer = setTimeout(end, max);
+}
+
 // ---------- Sekmeler ----------
 // Sekme çubuğunda bir sekme + altında boş içerik alanı oluşturur
 function makeTab(icon = '') {
@@ -666,6 +692,14 @@ function makeTab(icon = '') {
   tab.tabEl.querySelector('.tab-close').addEventListener('click', () => closeTab(tab));
   tabsEl.appendChild(tab.tabEl);
   tabs.push(tab);
+  // Sekmenin adı bu fonksiyondan hemen sonra (ekran çizilmeden) yazılıyor; genişliği ondan sonra
+  // ölçüp sekmeyi tam o genişliğe kadar açıyoruz
+  tab.opening = true;
+  queueMicrotask(() => {
+    tab.tabEl.style.setProperty('--tab-w', tab.tabEl.offsetWidth + 'px');
+    animate(tab.tabEl, 'tab-in', () => { tab.opening = false; tab.tabEl.style.removeProperty('--tab-w'); });
+  });
+  animate(tab.el, 'content-in');
   return tab;
 }
 
@@ -707,7 +741,9 @@ function closeTab(tab) {
     settingsTab = null;
   }
   tab.el.remove();
-  tab.tabEl.remove();
+  // Sekme çubuktan daralarak çıkar (şu anki genişliğinden başlayarak); o sırada tıklanamaz
+  tab.tabEl.style.maxWidth = tab.tabEl.offsetWidth + 'px';
+  animate(tab.tabEl, 'tab-out', () => tab.tabEl.remove());
   tabs.splice(idx, 1);
   if (!tabs.length) { api.closeWindow(); return; }
   if (activeTab === tab) activateTab(tabs[Math.min(idx, tabs.length - 1)]);
@@ -718,6 +754,9 @@ const paneName = (p) => tq((p && (p.title || p.shellName)) || 'Terminal');
 
 function updateTabTitle(tab) {
   if (tab === settingsTab) { tab.titleEl.textContent = t('Ayarlar'); tab.tabEl.dataset.tip = 'Ayarlar'; return; }
+  const el = tab.tabEl;
+  // Açılış/kapanış animasyonu sürerken genişliği o animasyon yönetir
+  const before = tab.opening || el.classList.contains('tab-out') ? 0 : el.offsetWidth;
   const panes = leaves(tab.root);
   const p = tab.activePane || panes[0];
   const title = paneName(p);
@@ -727,6 +766,13 @@ function updateTabTitle(tab) {
   tab.badgeEl.textContent = panes.length;
   tab.el.classList.toggle('multi', panes.length > 1);
   tab.tabEl.classList.toggle('attention', panes.some((p) => p.attention));
+  // Ad (veya panel sayısı) değişip sekme genişleyince/daralınca zıplamasın, kaysın
+  if (!before) return;
+  const after = el.offsetWidth;
+  if (Math.abs(after - before) < 6) return;
+  tab.widthAnim?.cancel();
+  tab.widthAnim = el.animate([{ width: before + 'px' }, { width: after + 'px' }],
+    { duration: 180, easing: 'cubic-bezier(.2, .8, .2, 1)' });
 }
 
 function cycleTab(dir) {
@@ -889,6 +935,8 @@ async function splitPane(dir, before = false) {
   const split = before ? new Split(dir, fresh, pane) : new Split(dir, pane, fresh);
   replaceNode(pane, split);
   split.mount();
+  // Yeni panel açıldığı taraftan kayarak gelir
+  animate(fresh.el, 'pane-in-' + (dir === 'row' ? (before ? 'left' : 'right') : (before ? 'up' : 'down')));
   focusPane(fresh);
   await fresh.start(pane.shellId || settings.shell, cwd);
   leaves(tab.root).forEach((p) => p.fitSoon());
@@ -952,6 +1000,7 @@ function showHiddenPane(pane, where) {
     const split = new Split('row', target, pane);
     replaceNode(target, split);
     split.mount();
+    animate(pane.el, 'pane-in-right');
     focusPane(pane);
     pane.reattached();
     leaves(tab.root).forEach((p) => p.fitSoon());

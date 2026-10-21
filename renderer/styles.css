@@ -106,6 +106,20 @@ body { display: flex; flex-direction: column; }
 .tab .tab-close:hover { opacity: 1; background: var(--border); }
 .tab .tab-close svg { width: 10px; height: 10px; }
 
+/* Sekme açılış/kapanış: genişliği sıfırdan açılır / sıfıra kapanır, böylece yanındaki
+   sekmeler ve + düğmesi zıplamadan kayar. margin-right sekmeler arasındaki 2px boşluğu da kapatır */
+.tab.tab-in, .tab.tab-out { overflow: hidden; }
+.tab.tab-in { animation: tab-in .24s cubic-bezier(.2, .8, .2, 1); }
+.tab.tab-out { animation: tab-out .18s cubic-bezier(.4, 0, .8, .4) forwards; pointer-events: none; }
+/* --tab-w: sekmenin son genişliği (renderer.js makeTab ölçüp verir) */
+@keyframes tab-in {
+  from { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: -2px; opacity: 0; transform: translateY(6px); }
+  to { max-width: var(--tab-w, 220px); }
+}
+@keyframes tab-out {
+  to { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: -2px; opacity: 0; transform: translateY(6px); }
+}
+
 .newtab-group { display: flex; align-items: center; height: 32px; margin-left: 2px; }
 .spacer { flex: 1; height: 100%; }
 .tools { display: flex; align-items: center; height: 100%; gap: 2px; }
@@ -147,6 +161,23 @@ body { display: flex; flex-direction: column; }
   display: none;
 }
 .tab-content.active { display: flex; }
+/* Yeni panel kayarak gelirken sekmenin dışına taşmasın */
+.tab-content { overflow: hidden; }
+
+/* Yeni sekmenin içeriği hafifçe aşağıdan belirir. Terminal içeren öğelerde scale kullanılmaz
+   (xterm harf ölçüsünü ekrandaki boyuttan alır, büyütme ölçüyü bozar) */
+.tab-content.content-in { animation: content-in .24s cubic-bezier(.2, .8, .2, 1); }
+@keyframes content-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* Yeni bölünen panel açıldığı taraftan kayarak gelir */
+.pane.pane-in-right { animation: pane-in-right .26s cubic-bezier(.2, .8, .2, 1); }
+.pane.pane-in-left  { animation: pane-in-left  .26s cubic-bezier(.2, .8, .2, 1); }
+.pane.pane-in-down  { animation: pane-in-down  .26s cubic-bezier(.2, .8, .2, 1); }
+.pane.pane-in-up    { animation: pane-in-up    .26s cubic-bezier(.2, .8, .2, 1); }
+@keyframes pane-in-right { from { opacity: 0; transform: translateX(32px); } }
+@keyframes pane-in-left  { from { opacity: 0; transform: translateX(-32px); } }
+@keyframes pane-in-down  { from { opacity: 0; transform: translateY(32px); } }
+@keyframes pane-in-up    { from { opacity: 0; transform: translateY(-32px); } }
 
 .split {
   display: flex;

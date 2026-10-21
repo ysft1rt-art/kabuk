@@ -30,6 +30,15 @@ Yeni bir kontrol gerekirse önce ui.js'e tema renkleriyle çizilen bir bileşen 
 Düz metin `<input>` serbest, ama `.set-input` stiliyle ve `spellcheck="false" autocomplete="off"` ile.
 Değişiklik sonrası kontrol: `grep -n 'title=\|<select\|type="range"\|type="checkbox"\|confirm(' renderer/`
 
+## Animasyonlar
+
+`animate(el, sınıf, bitince)` (renderer.js) sınıfı ekler, animasyon bitince kaldırır; animasyonların kendisi styles.css'te.
+Sekme açılışı (`tab-in`, ad yazıldıktan sonra ölçülen `--tab-w` genişliğine açılır), kapanışı (`tab-out`, bitince
+DOM'dan silinir), yeni sekme içeriği (`content-in`), yeni bölünen panel (`pane-in-right/left/down/up`). Sekme adı
+değişince genişlik `updateTabTitle` içinde yumuşakça kayar (açılış sürerken değil: `tab.opening`).
+Terminal içeren öğelerde yalnızca kaydırma + saydamlık: `scale` xterm'in harf ölçüsünü bozar.
+Panel genişliğini (flex) canlandırma: her karede kabuk yeniden boyutlanır.
+
 ## Temalar
 
 `renderer/themes.js`. Her temanın koyu ve açık hali olmak zorunda (Koyu/Açık ayarı bütün temalarda geçerli).
