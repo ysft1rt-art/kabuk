@@ -8,6 +8,8 @@
   --accent: #7aa2f7;
   --border: #292e42;
   --bar-h: 40px;
+  --tab-box: #1f2335;
+  --tab-hover: rgba(192, 202, 245, .06);
 }
 
 * { box-sizing: border-box; }
@@ -30,18 +32,20 @@ body { display: flex; flex-direction: column; }
   height: var(--bar-h);
   flex: none;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   background: var(--bar);
   -webkit-app-region: drag;
   padding-left: 8px;
-  gap: 4px;
+  gap: 6px;
 }
 #titlebar button, .tab { -webkit-app-region: no-drag; }
 
 #tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 2px;
+  align-items: center;
+  align-self: stretch;
+  gap: 4px;
+  padding: 0 2px;
   min-width: 0;
   overflow: hidden;
 }
@@ -50,35 +54,27 @@ body { display: flex; flex-direction: column; }
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 32px;
+  height: 30px;
   min-width: 90px;
   max-width: 220px;
-  padding: 0 8px 0 12px;
-  border-radius: 8px 8px 0 0;
-  background: var(--tab);
+  padding: 0 6px 0 12px;
+  border-radius: 8px;
+  background: transparent;
   color: var(--dim);
   cursor: default;
   position: relative;
-  transition: background .12s, color .12s;
+  transition: background .12s, color .12s, box-shadow .12s;
 }
-.tab:hover { color: var(--fg); }
+.tab:hover { color: var(--fg); background: var(--tab-hover); }
+/* Sekmeler başlık çubuğunda yüzen kutular: seçili olan belirgin bir kart */
 .tab.active {
-  background: var(--tab-active);
+  background: var(--tab-box);
   color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
-.tab.active::before {
-  content: "";
-  position: absolute;
-  left: 10px; right: 10px; top: 0;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
-  background: var(--accent);
-}
-/* Buzlu cam: başlık çubuğu ve terminal aynı camı paylaşır; aktif sekme
-   alttan yukarı doğru hafif bir parlamayla belirir, diğerleri cama gömülüdür */
-.acrylic .tab { background: transparent; }
-.acrylic .tab:hover { background: linear-gradient(to top, var(--tab), transparent); }
-.acrylic .tab.active { background: linear-gradient(to top, var(--tab-glow), transparent); }
+body.light:not(.acrylic) .tab.active { box-shadow: inset 0 0 0 1px var(--border), 0 1px 2px rgba(0, 0, 0, .06); }
+.acrylic .tab.active { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
+body.light.acrylic .tab.active { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); }
 
 .tab .tab-title {
   flex: 1;
@@ -95,7 +91,7 @@ body { display: flex; flex-direction: column; }
 }
 .tab .tab-close {
   width: 20px; height: 20px;
-  border: 0; border-radius: 5px;
+  border: 0; border-radius: 6px;
   background: transparent;
   color: inherit;
   display: grid; place-items: center;
@@ -108,7 +104,7 @@ body { display: flex; flex-direction: column; }
 
 /* Sekme sürükleme (renderer.js startTabDrag): tutulan sekme fareyi izler ve öndedir,
    diğerleri yer açmak için kayar. Sürüklerken başlık çubuğu pencereyi taşımasın */
-.tab.dragging { z-index: 3; transition: none; box-shadow: 0 4px 14px rgba(0, 0, 0, .3); }
+.tab.dragging { z-index: 3; transition: none; box-shadow: inset 0 0 0 1px var(--border), 0 4px 14px rgba(0, 0, 0, .3); }
 .tab.drag-shift { transition: transform .16s cubic-bezier(.2, .8, .2, 1), background .12s, color .12s; }
 body.tab-dragging #titlebar { -webkit-app-region: no-drag; }
 body.tab-dragging, body.tab-dragging * { cursor: default !important; }
@@ -120,28 +116,28 @@ body.tab-dragging, body.tab-dragging * { cursor: default !important; }
 .tab.tab-out { animation: tab-out .18s cubic-bezier(.4, 0, .8, .4) forwards; pointer-events: none; }
 /* --tab-w: sekmenin son genişliği (renderer.js makeTab ölçüp verir) */
 @keyframes tab-in {
-  from { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: -2px; opacity: 0; transform: translateY(6px); }
+  from { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: -4px; opacity: 0; transform: translateY(4px); }
   to { max-width: var(--tab-w, 220px); }
 }
 @keyframes tab-out {
-  to { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: -2px; opacity: 0; transform: translateY(6px); }
+  to { max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: -4px; opacity: 0; transform: translateY(4px); }
 }
 
-.newtab-group { display: flex; align-items: center; height: 32px; margin-left: 2px; }
+.newtab-group { display: flex; align-items: center; height: 30px; gap: 2px; }
 .spacer { flex: 1; height: 100%; }
 .tools { display: flex; align-items: center; height: 100%; gap: 2px; }
 .caption-space { width: 140px; flex: none; }
 
 .icon-btn {
-  width: 30px; height: 28px;
-  border: 0; border-radius: 6px;
+  width: 34px; height: 30px;
+  border: 0; border-radius: 7px;
   background: transparent;
   color: var(--dim);
   display: grid; place-items: center;
   cursor: pointer;
   align-self: center;
 }
-.icon-btn.small { width: 20px; }
+.icon-btn.small { width: 22px; }
 /* Camda simgeler arka plana karışmasın: tam yazı renginde */
 .acrylic .icon-btn { color: var(--fg); opacity: .8; }
 .acrylic .icon-btn:hover, .acrylic .icon-btn.on { opacity: 1; }
@@ -149,11 +145,12 @@ body.tab-dragging, body.tab-dragging * { cursor: default !important; }
 .icon-btn:hover { background: var(--tab); color: var(--fg); }
 .icon-btn.on { color: var(--accent); }
 .icon-btn svg, .tab-close svg {
-  width: 16px; height: 16px;
+  width: 18px; height: 18px;
   fill: none; stroke: currentColor; stroke-width: 1.4;
   stroke-linecap: round; stroke-linejoin: round;
 }
-.icon-btn.small svg { width: 12px; height: 12px; }
+.icon-btn.small svg { width: 13px; height: 13px; }
+.tab .tab-close svg { width: 10px; height: 10px; }
 
 /* ---------- Çalışma alanı + paneller ---------- */
 #workspace {
@@ -256,11 +253,11 @@ body.tab-dragging, body.tab-dragging * { cursor: default !important; }
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
+  height: 28px;
   margin-left: 6px;
   padding: 0 8px;
   border: 1px dashed var(--border);
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   color: var(--dim);
   font: inherit;
@@ -469,7 +466,7 @@ body.light .multi .pane:not(.focused)::after { background: rgba(255, 255, 255, .
 /* ---------- Ayarlar sekmesi ---------- */
 .tab .tab-icon {
   width: 14px; height: 14px; flex: none;
-  fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round;
+  fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
 }
 
 .settings { flex: 1; display: flex; min-width: 0; min-height: 0; }
@@ -492,7 +489,7 @@ body.light .multi .pane:not(.focused)::after { background: rgba(255, 255, 255, .
   gap: 10px;
   padding: 8px 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   color: var(--dim);
   font: inherit;
@@ -989,11 +986,11 @@ img, svg, a, button { -webkit-user-drag: none; }
   display: flex;
   align-items: center;
   gap: 5px;
-  height: 26px;
+  height: 28px;
   margin-right: 6px;
   padding: 0 10px 0 8px;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  border-radius: 7px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
   font: inherit;

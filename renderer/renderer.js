@@ -198,7 +198,8 @@ function applyTheme() {
   root.setProperty('--bar', a ? glass : ui.bar);
   root.setProperty('--tab', a ? withAlpha(ui.fg, 0.08) : ui.tab);
   root.setProperty('--tab-active', a ? glass : ui.tabActive);
-  root.setProperty('--tab-glow', withAlpha(ui.fg, th.light ? 0.07 : 0.1));
+  root.setProperty('--tab-box', a ? withAlpha(th.light ? '#ffffff' : ui.fg, th.light ? 0.55 : 0.1) : (th.light ? ui.tabActive : ui.tab));
+  root.setProperty('--tab-hover', withAlpha(ui.fg, th.light ? 0.05 : 0.06));
   root.setProperty('--popover', ui.bar);
   document.body.classList.toggle('acrylic', a);
   root.setProperty('--fg', ui.fg);
@@ -954,7 +955,7 @@ function closeTab(tab) {
 // ---------- Sekmeleri sürükleyip taşıma ----------
 // Basılı tutup yana çekince sekme fareyi izler, diğer sekmeler yer açmak için kayar;
 // bırakınca sekme yeni yerine oturur. 5 px'ten az oynarsa normal tıklama sayılır
-const TAB_GAP = 2;   // sekmeler arası boşluk (styles.css #tabs gap)
+const TAB_GAP = 4;   // sekmeler arası boşluk (styles.css #tabs gap)
 function startTabDrag(tab, e) {
   if (tabs.length < 2) return;
   const startX = e.clientX;
@@ -1594,7 +1595,7 @@ const settingsPage = $('settingsPage');
 const settingsScroll = $('settingsScroll');
 let settingsTab = null;
 
-const GEAR_ICON = `<svg class="tab-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/><circle cx="8" cy="8" r="4.3"/></svg>`;
+const GEAR_ICON = `<svg class="tab-icon" viewBox="0 0 16 16"><path d="M6.73 3.27L6.98 1.58h2.04l.25 1.69A4.9 4.9 0 0 1 10.45 3.76l1.37-1.02 1.44 1.44-1.02 1.37A4.9 4.9 0 0 1 12.73 6.73l1.69.25v2.04l-1.69.25A4.9 4.9 0 0 1 12.24 10.45l1.02 1.37-1.44 1.44-1.37-1.02A4.9 4.9 0 0 1 9.27 12.73l-.25 1.69H6.98l-.25-1.69A4.9 4.9 0 0 1 5.55 12.24l-1.37 1.02-1.44-1.44 1.02-1.37A4.9 4.9 0 0 1 3.27 9.27l-1.69-.25V6.98l1.69-.25A4.9 4.9 0 0 1 3.76 5.55L2.74 4.18l1.44-1.44 1.37 1.02A4.9 4.9 0 0 1 6.73 3.27Z"/><circle cx="8" cy="8" r="2.1"/></svg>`;
 
 // section: açılınca kaydırılacak bölüm (örn. 'secLook')
 function openSettings(section) {
