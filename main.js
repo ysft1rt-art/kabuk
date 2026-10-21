@@ -217,6 +217,27 @@ function ensureShortcuts() {
   } catch {}
 }
 
+// Başlat menüsünde Kabuk'un kimliğini (AUMID) taşıyan ama Kabuk'u açmayan kısayol Windows'u şaşırtır: görev
+// çubuğu simgesi kaybolur, aramada Kabuk çıkmaz, tıklayınca boş Electron penceresi açılır. 2026-10-21'de iki kez
+// "Electron.lnk" olarak çıktı (geliştirme klasöründeki electron.exe, uygulama yolu yok; neyin yazdığı bulunamadı).
+// Böyle kısayollar açılıştan biraz sonra silinir
+function removeStrayShortcuts(dir = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')) {
+  let files = [];
+  try { files = fs.readdirSync(dir).filter((f) => /\.lnk$/i.test(f) && f.toLowerCase() !== 'kabuk.lnk'); } catch { return []; }
+  const removed = [];
+  for (const f of files) {
+    const file = path.join(dir, f);
+    try {
+      const l = shell.readShortcutLink(file);
+      if (l.appUserModelId === AUMID && /(^|[\\/])electron\.exe$/i.test(l.target || '') && !(l.args || '').trim()) {
+        fs.rmSync(file, { force: true });
+        removed.push(f);
+      }
+    } catch {}
+  }
+  return removed;
+}
+
 function createWindow() {
   const state = readState();
   const startMode = state.startMode || 'normal';
@@ -528,6 +549,7 @@ if (gotLock) app.whenReady().then(() => {
   // Geliştirme klasöründen açılan Kabuk kurulu olanı bulabilsin (installedElsewhere)
   if (app.isPackaged && !HEADLESS) writeState({ installedExe: process.execPath });
   ensureShortcuts();
+  if (!HEADLESS && process.platform === 'win32') setTimeout(removeStrayShortcuts, 5000);
   startWarm();
   createWindow();
 });

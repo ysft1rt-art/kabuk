@@ -55,6 +55,10 @@ dosyaları (simgeler `assets\`, `contextmenu\`) gösterir, çünkü uygulamanın
 
 Görev çubuğu simgesi: Windows, pencerenin kimliğine (AUMID `Kabuk`) sahip Başlat menüsü kısayolunun simgesini
 kullanır. Aynı kimlikle başka bir kısayol varsa (2026-10-21: eski `Electron.lnk`) Electron simgesi görünür.
+2026-10-21 22:19'da yine çıktı (hedef geliştirme klasöründeki electron.exe, argümansız, AUMID `Kabuk`; neyin yazdığı
+bulunamadı, Electron'un bildirimleri denendi, yazmıyor). Sonuç: kurulu Kabuk'un görev çubuğu simgesi kayboldu, Başlat
+aramasında çıkmadı, tıklayınca boş Electron penceresi açıldı. main.js `removeStrayShortcuts` açılıştan 5 sn sonra
+böyle kısayolları (AUMID `Kabuk` + electron.exe + argümansız, adı Kabuk.lnk değil) siler.
 
 ## Arayüz kuralı: Chromium'un hazır öğeleri yok
 
