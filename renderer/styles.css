@@ -893,6 +893,10 @@ img, svg, a, button { -webkit-user-drag: none; }
 .keys-foot { margin-top: 14px; }
 .set-row.key-row { min-height: 50px; padding-top: 9px; padding-bottom: 9px; }
 .key-row .set-desc.set-error { color: #e5484d; }
+.menu-status { margin-top: 6px; color: var(--accent); }
+.menu-status.set-error { color: #e5484d; }
+.menu-trust { margin-top: 8px; }
+.menu-trust[hidden] { display: none; }
 .kbd-list { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
 .kbd-chip {
   display: inline-flex;

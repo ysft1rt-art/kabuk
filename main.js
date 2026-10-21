@@ -22,6 +22,7 @@ const MAIN_EN = {
   'Tüm dosyalar': 'All files',
   '"{cwd}" klasörü bulunamadı, kullanıcı klasöründe açıldı.': 'Folder "{cwd}" was not found; opened in your user folder instead.',
   '"{name}" başlatılamadı ({file}). {fallback} açıldı.': 'Could not start "{name}" ({file}). Opened {fallback} instead.',
+  'Kabuk ile aç': 'Open in Kabuk',
 };
 function mt(text, vars = {}) {
   const s = lang === 'en' && MAIN_EN[text] ? MAIN_EN[text] : text;
@@ -66,6 +67,97 @@ function onScreen(b) {
 
 // Otomatik testlerde pencere hiç görünmeden, ekran dışında çizilir
 const HEADLESS = process.env.KABUK_HEADLESS === '1';
+
+// ---------- Sağ tık menüsü ve kurulu yapay zekâ araçları (contextmenu/menu.js) ----------
+const menu = require('./contextmenu/menu');
+
+// ---------- "Kabuk ile aç": klasör ve çalıştırılacak araç ----------
+// Sağ tık menüsü Kabuk'u şöyle başlatır: electron.exe "<kabuk>" [--kabuk-run=claude] "--kabuk-dir=<klasör>"
+function cleanLaunch(req) {
+  if (!req || typeof req !== 'object') return null;
+  let dir = typeof req.dir === 'string' ? req.dir : null;
+  let run = typeof req.run === 'string' ? req.run : null;
+  if (dir) {
+    // Eski menüde "C:\" tırnağı kaçırır ve sona " kalır; onu temizle
+    dir = dir.replace(/"+$/, '');
+    if (/^[A-Za-z]:$/.test(dir)) dir += '\\';
+  }
+  // Yalnızca listedeki araçlar çalıştırılır (komut satırından rastgele komut gelmesin)
+  if (run && !menu.readCliList().some((c) => c.cmd === run)) run = null;
+  return dir || run ? { dir, run } : null;
+}
+
+function parseLaunch(argv) {
+  const req = {};
+  for (const a of argv) {
+    if (a.startsWith('--kabuk-dir=')) req.dir = a.slice('--kabuk-dir='.length);
+    else if (a.startsWith('--kabuk-run=')) req.run = a.slice('--kabuk-run='.length);
+  }
+  return cleanLaunch(req);
+}
+
+// İlk açılışın isteği: renderer hazır olunca alır (launch:take)
+let initialLaunch = parseLaunch(process.argv);
+
+// Kabuk tek pencerede çalışır: zaten açıkken tekrar başlatılırsa (sağ tık menüsü, masaüstü kısayolu)
+// yeni pencere açılmaz, açık pencerede yeni sekme açılır. Ayarlar da iki kopya arasında bozulmaz
+const gotLock = app.requestSingleInstanceLock(initialLaunch || {});
+if (!gotLock) app.quit();
+
+app.on('second-instance', (_e, argv, _cwd, data) => {
+  if (!win) return;
+  const req = cleanLaunch(data) || parseLaunch(argv);
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+  win.webContents.send('open:request', req || {});
+});
+
+// ---------- Sağ tık menüsü kurulumu (contextmenu/menu.js) ----------
+let menuStatus = { state: HEADLESS ? 'off' : 'working', clis: [] };
+let menuWanted = null;              // ayarlardaki son değer
+let menuQueue = Promise.resolve();  // kurulumlar sırayla (aynı anda iki PowerShell kurulumu olmasın)
+const menuCtx = () => ({
+  appDir: __dirname,
+  exe: process.execPath,
+  label: mt('Kabuk ile aç'),
+  readState,
+  writeState,
+});
+
+function sendMenuStatus() {
+  if (win && !win.isDestroyed()) win.webContents.send('menu:status', menuStatus);
+}
+
+function syncMenu() {
+  const run = async () => {
+    if (HEADLESS || process.platform !== 'win32') {
+      menuStatus = { state: 'off', clis: menu.detectClis().map((c) => c.name) };
+    } else {
+      menuStatus = { ...menuStatus, state: 'working' };
+      sendMenuStatus();
+      try { menuStatus = await menu.sync(menuCtx(), menuWanted); } catch (err) { menuStatus = { state: 'error', clis: [], error: String(err) }; }
+    }
+    sendMenuStatus();
+  };
+  menuQueue = menuQueue.then(run, run);
+  return menuQueue;
+}
+
+// Ayar değişince (ve açılışta bir kez) menüyü kur/kaldır
+function wantContextMenu(want) {
+  if (menuWanted === want) return;
+  menuWanted = want;
+  syncMenu();
+}
+
+// "Windows 11 menüsüne ekle" düğmesi: yönetici onayıyla sertifikaya güven, sonra menüyü yeniden kur
+ipcMain.handle('menu:trust', async () => {
+  if (HEADLESS) return 'canceled';
+  const r = await menu.trust();
+  if (r === 'done') await syncMenu();
+  return r;
+});
 
 // ---------- Windows kimliği ve kısayollar ----------
 // Windows bildirimleri yalnızca Başlat menüsünde aynı kimlikle (AppUserModelID) bir kısayolu olan
@@ -157,7 +249,11 @@ ipcMain.handle('settings:apply', (_e, s) => {
   if (typeof s.confirmClose === 'boolean') confirmClose = s.confirmClose;
   if (['tr', 'en'].includes(s.lang)) lang = s.lang;
   if (['normal', 'maximized', 'remember'].includes(s.startMode)) writeState({ startMode: s.startMode });
+  if (typeof s.contextMenu === 'boolean') wantContextMenu(s.contextMenu);
 });
+
+ipcMain.handle('launch:take', () => { const r = initialLaunch; initialLaunch = null; return r; });
+ipcMain.handle('menu:status', () => menuStatus);
 
 ipcMain.handle('paths:get', () => ({ home: os.homedir(), desktop: app.getPath('desktop') }));
 
@@ -273,5 +369,5 @@ ipcMain.on('window:close', (_e, force) => {
   win?.close();
 });
 
-app.whenReady().then(() => { ensureShortcuts(); createWindow(); });
+if (gotLock) app.whenReady().then(() => { ensureShortcuts(); createWindow(); });
 app.on('window-all-closed', () => app.quit());

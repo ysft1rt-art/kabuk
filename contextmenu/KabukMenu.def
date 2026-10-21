@@ -1,0 +1,4 @@
+LIBRARY KabukMenu
+EXPORTS
+  DllGetClassObject PRIVATE
+  DllCanUnloadNow PRIVATE

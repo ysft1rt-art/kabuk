@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Kabuk'un Windows 11 sağ tık menüsü için kimlik paketi ("sparse" paket).
+  Pakette yalnızca bu dosya ve simge var; asıl dosyalar (KabukMenu.dll, electron.exe) Kabuk klasöründe,
+  kurulumda -ExternalLocation ile gösterilir.
+  Paket, build.ps1'in her derlemede yeniden oluşturduğu "CN=Kabuk" imzasıyla imzalanır (gizli anahtar hemen silinir).
+  Windows bu imzaya, kullanıcı Ayarlar'daki "Windows 11 menüsüne ekle" düğmesiyle bir kez yönetici onayı verince güvenir.
+  Değiştirince Version'ı artır, build.ps1'i çalıştır ve contextmenu/menu.js'teki PACKAGE_VERSION'ı güncelle.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap10 desktop4 desktop5 com rescap">
+
+  <Identity Name="Kabuk.ContextMenu"
+    Publisher="CN=Kabuk"
+    Version="1.0.0.0"
+    ProcessorArchitecture="neutral" />
+
+  <Properties>
+    <DisplayName>Kabuk</DisplayName>
+    <PublisherDisplayName>Kabuk</PublisherDisplayName>
+    <Logo>icon.png</Logo>
+    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+  </Properties>
+
+  <Resources>
+    <Resource Language="tr-tr" />
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+  </Capabilities>
+
+  <Applications>
+    <Application Id="Kabuk"
+      Executable="node_modules\electron\dist\electron.exe"
+      uap10:TrustLevel="mediumIL"
+      uap10:RuntimeBehavior="win32App">
+      <uap:VisualElements
+        AppListEntry="none"
+        DisplayName="Kabuk"
+        Description="Kabuk terminali"
+        BackgroundColor="transparent"
+        Square150x150Logo="icon.png"
+        Square44x44Logo="icon.png" />
+      <Extensions>
+        <desktop4:Extension Category="windows.fileExplorerContextMenus">
+          <desktop4:FileExplorerContextMenus>
+            <desktop5:ItemType Type="Directory">
+              <desktop5:Verb Id="KabukOpen" Clsid="90F4AFCE-255F-4C2C-96E8-DF116179198A" />
+            </desktop5:ItemType>
+            <desktop5:ItemType Type="Directory\Background">
+              <desktop5:Verb Id="KabukOpen" Clsid="90F4AFCE-255F-4C2C-96E8-DF116179198A" />
+            </desktop5:ItemType>
+          </desktop4:FileExplorerContextMenus>
+        </desktop4:Extension>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:SurrogateServer DisplayName="Kabuk sağ tık menüsü">
+              <com:Class Id="90F4AFCE-255F-4C2C-96E8-DF116179198A" Path="contextmenu\KabukMenu.dll" ThreadingModel="STA" />
+            </com:SurrogateServer>
+          </com:ComServer>
+        </com:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+</Package>

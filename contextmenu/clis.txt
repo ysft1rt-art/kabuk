@@ -1,0 +1,21 @@
+# Sağ tık menüsündeki "Kabuk ile aç" alt menüsünde aranan yapay zekâ komut satırı araçları.
+# Biçim:  komut | menüde görünen ad
+# Menü her açıldığında bu komutlar PATH'te aranır; bulunanlar sırayla listelenir.
+# Yeni bir araç eklemek için bir satır eklemek yeterli (menü eklentisi ve Kabuk bu dosyayı okur).
+claude       | Claude Code
+codex        | Codex
+gemini       | Gemini CLI
+opencode     | OpenCode
+pi           | Pi
+copilot      | GitHub Copilot CLI
+cursor-agent | Cursor CLI
+qwen         | Qwen Code
+amp          | Amp
+crush        | Crush
+droid        | Factory Droid
+cline        | Cline
+kimi         | Kimi CLI
+kiro-cli     | Kiro CLI
+auggie       | Auggie
+goose        | Goose
+aider        | Aider

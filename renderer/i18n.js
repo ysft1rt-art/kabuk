@@ -41,7 +41,7 @@ const i18nMissing = () => [...I18N_MISSING];
 // Kodun kendisinin doldurduğu yerler (zaten t() ile yazılıyor) ve terminaller atlanır
 const I18N_SKIP = [
   '#tabs', '.pane', '#helpKeys', '#hiddenList', '#shellMenu', '#keyGroups', '#shellList', '#hiddenCount',
-  '#startDirFixed', '#fontPreview', '#fontSizeLabel', '#addShellError', '#setLang', '.set-path', '.kselect',
+  '#startDirFixed', '#menuStatus', '#fontPreview', '#fontSizeLabel', '#addShellError', '#setLang', '.set-path', '.kselect',
   '.kslider-host', '.kmenu', '.ktip', '.kmodal-back', '#toast', 'script', 'style', 'svg',
 ].join(', ');
 const i18nOrigText = new WeakMap();
@@ -156,6 +156,26 @@ const EN = {
   'Son halini hatırla': 'Remember last size',
   'Kapatırken sor': 'Ask before closing',
   'Birden fazla terminal açıkken pencereyi kapatmadan önce onay ister.': 'Asks before closing the window when more than one terminal is open.',
+  'Sağ tık menüsünde "Kabuk ile aç"': '"Open in Kabuk" in the right-click menu',
+  'Bir klasöre sağ tıklayınca Kabuk\'u o klasörde açar. Bilgisayarda kurulu yapay zekâ araçları (Claude Code, Codex…) varsa onlarla doğrudan da açabilirsin.':
+    'Right-click a folder to open Kabuk there. If AI tools (Claude Code, Codex…) are installed, you can open them directly too.',
+  'Ayarlanıyor…': 'Setting up…',
+  'Windows 11 menüsüne ekle…': 'Add to Windows 11 menu…',
+  'Şimdilik "Diğer seçenekleri göster" altında. Kısa menüde de görünmesi için aşağıdaki düğmeye bas.':
+    'For now it\'s under "Show more options". Press the button below to also show it in the short menu.',
+  'Windows 11 menüsüne eklensin mi?': 'Add to the Windows 11 menu?',
+  'Windows, kısa sağ tık menüsüne yalnızca güvendiği eklentileri alır. Kabuk\'un menü eklentisi kendi imzasıyla imzalı; Windows\'un bu imzaya güvenmesi için bir kez yönetici onayı gerekiyor.\n\nBirazdan Windows "Bu uygulamanın değişiklik yapmasına izin veriyor musunuz?" diye soracak (Windows PowerShell). "Evet" de.\n\nBu imzanın gizli anahtarı imzalandıktan sonra silindi; bu imzayla başka hiçbir şey onaylanamaz.':
+    'Windows only allows extensions it trusts in the short right-click menu. Kabuk\'s menu extension is signed with its own signature; for Windows to trust it, administrator approval is needed once.\n\nWindows will soon ask "Do you want to allow this app to make changes?" (Windows PowerShell). Choose "Yes".\n\nThe private key of this signature was deleted after signing; nothing else can be approved with it.',
+  'Devam et': 'Continue',
+  'Yönetici onayı verilmedi; menü "Diğer seçenekleri göster" altında kalmaya devam ediyor.': 'Administrator approval wasn\'t given; the menu stays under "Show more options".',
+  'İmza eklenemedi. Tekrar dene.': 'Couldn\'t add the signature. Try again.',
+  'Windows 11 sağ tık menüsünde açık.': 'On in the Windows 11 right-click menu.',
+  'Yeni menüye eklenemedi; "Diğer seçenekleri göster" altında açık.': 'Couldn\'t be added to the new menu; it\'s under "Show more options".',
+  'Menüye eklenemedi: {error}': 'Couldn\'t be added to the menu: {error}',
+  'Bu modda kapalı.': 'Off in this mode.',
+  'Kapalı.': 'Off.',
+  'Bulunan yapay zekâ araçları: {list}': 'AI tools found: {list}',
+  'Yapay zekâ aracı bulunamadı; menüde yalnızca terminal var.': 'No AI tools found; the menu only has the terminal.',
 
   // Ayarlar: Görünüm
   'Dil / Language': 'Language / Dil',

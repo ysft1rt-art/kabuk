@@ -25,6 +25,7 @@ const DEFAULTS = {
   splitSameDir: true,  // bölünen panel, bulunduğun klasörde açılır
   startMode: 'normal', // pencere: normal / maximized / remember
   confirmClose: true,
+  contextMenu: true,   // Windows sağ tık menüsünde "Kabuk ile aç" (main.js kurar)
   // Terminal
   cursorStyle: 'bar',
   cursorBlink: true,
@@ -710,7 +711,8 @@ function makeTab(icon = '') {
   return tab;
 }
 
-async function newTab(shellId = settings.shell, existingPane = null) {
+// cwd verilmezse ayarlardaki başlangıç klasörü
+async function newTab(shellId = settings.shell, existingPane = null, cwd = undefined) {
   const prevTab = activeTab;
   const tab = makeTab();
   const pane = existingPane || new Pane(tab);
@@ -723,9 +725,76 @@ async function newTab(shellId = settings.shell, existingPane = null) {
   activateTab(tab);
   focusPane(pane);
   if (existingPane) pane.reattached();
-  else await pane.start(shellId);
+  else await pane.start(shellId, cwd);
   return tab;
 }
+
+// ---------- "Kabuk ile aç" (Windows sağ tık menüsü) ----------
+// req = { dir, run }: klasörde yeni sekme açar; bir araç seçildiyse (claude, codex...) komut istemi
+// gelince onu çalıştırır. Kabuk kapalıyken menüden açılırsa ilk sekme de böyle açılır
+async function openRequest(req) {
+  const tab = await newTab(settings.shell, null, req?.dir || undefined);
+  if (req?.run) runWhenReady(tab.root, req.run);
+}
+
+// Kabuk komut istemini (profil yüklenip "PS C:\...>" görünene kadar) bekler, sonra komutu yazar.
+// Önceden yazılırsa PowerShell tuşları yutabiliyor. En fazla 8 saniye bekler
+function runWhenReady(pane, cmd) {
+  const start = performance.now();
+  const tick = () => {
+    if (!pane.ptyId) return;   // sekme kapatıldı
+    if (!pane.atEmptyPrompt() && performance.now() - start < 8000) { setTimeout(tick, 60); return; }
+    pane.everTyped = true;     // komut önerileri çıkmasın
+    pane.touched = true;       // Ctrl+Z bu sekmeyi kapatmasın
+    pane.fx.hideHint();
+    api.write(pane.ptyId, cmd + '\r');
+  };
+  tick();
+}
+
+api.onOpenRequest((req) => openRequest(req));
+
+// Ayarlardaki "Kabuk ile aç" satırının altındaki durum yazısı
+let menuStatus = { state: 'working', clis: [] };
+api.onMenuStatus((s) => { menuStatus = s; renderMenuStatus(); });
+function renderMenuStatus() {
+  const el = $('menuStatus');
+  if (!el) return;
+  const s = menuStatus;
+  const texts = {
+    working: t('Ayarlanıyor…'),
+    modern: t('Windows 11 sağ tık menüsünde açık.'),
+    classic: s.needsTrust
+      ? t('Şimdilik "Diğer seçenekleri göster" altında. Kısa menüde de görünmesi için aşağıdaki düğmeye bas.')
+      : t('Yeni menüye eklenemedi; "Diğer seçenekleri göster" altında açık.'),
+    error: t('Menüye eklenemedi: {error}', { error: s.error || '?' }),
+    off: settings.contextMenu ? t('Bu modda kapalı.') : t('Kapalı.'),
+  };
+  let text = texts[s.state] || '';
+  if (s.state === 'modern' || s.state === 'classic') {
+    text += ' ' + (s.clis.length
+      ? t('Bulunan yapay zekâ araçları: {list}', { list: s.clis.join(', ') })
+      : t('Yapay zekâ aracı bulunamadı; menüde yalnızca terminal var.'));
+  }
+  el.textContent = text;
+  el.classList.toggle('set-error', s.state === 'error');
+  $('menuTrust').hidden = !(settings.contextMenu && s.needsTrust && s.state !== 'working');
+}
+
+// "Windows 11 menüsüne ekle": Kabuk'un imzasına güvenmek için Windows bir kez yönetici onayı ister
+$('menuTrust').onclick = async () => {
+  const ok = await KUI.confirm({
+    title: t('Windows 11 menüsüne eklensin mi?'),
+    message: t('Windows, kısa sağ tık menüsüne yalnızca güvendiği eklentileri alır. Kabuk\'un menü eklentisi kendi imzasıyla imzalı; Windows\'un bu imzaya güvenmesi için bir kez yönetici onayı gerekiyor.\n\nBirazdan Windows "Bu uygulamanın değişiklik yapmasına izin veriyor musunuz?" diye soracak (Windows PowerShell). "Evet" de.\n\nBu imzanın gizli anahtarı imzalandıktan sonra silindi; bu imzayla başka hiçbir şey onaylanamaz.'),
+    ok: t('Devam et'),
+  });
+  if (!ok) return;
+  $('menuTrust').disabled = true;
+  const r = await api.trustMenu();
+  $('menuTrust').disabled = false;
+  if (r === 'canceled') showToast(t('Yönetici onayı verilmedi; menü "Diğer seçenekleri göster" altında kalmaya devam ediyor.'));
+  else if (r !== 'done') showToast(t('İmza eklenemedi. Tekrar dene.'));
+};
 
 function activateTab(tab) {
   activeTab = tab;
@@ -1453,6 +1522,7 @@ const ui = {
   tips: KUI.toggle($('setTips'), (on) => { settings.tips = on; saveSettings(); forEachPane((p) => p.hintSoon()); }),
   splitSameDir: KUI.toggle($('setSplitSameDir'), (on) => changeSetting('splitSameDir', on)),
   confirmClose: KUI.toggle($('setConfirmClose'), (on) => changeSetting('confirmClose', on)),
+  contextMenu: KUI.toggle($('setContextMenu'), (on) => changeSetting('contextMenu', on)),
   cursorBlink: KUI.toggle($('setCursorBlink'), (on) => changeSetting('cursorBlink', on)),
   copyOnSelect: KUI.toggle($('setCopyOnSelect'), (on) => changeSetting('copyOnSelect', on)),
   rightClick: KUI.toggle($('setRightClick'), (on) => changeSetting('rightClick', on)),
@@ -1506,6 +1576,7 @@ async function syncMain() {
     confirmClose: settings.confirmClose,
     startMode: settings.startMode,
     lang: settings.lang,
+    contextMenu: settings.contextMenu,
   });
   shells = await api.listShells();
   if (!shells.some((s) => s.id === settings.shell)) settings.shell = shells[0]?.id;
@@ -1529,6 +1600,8 @@ function renderSettings() {
   ui.splitSameDir.setChecked(settings.splitSameDir);
   setSegmented('setStartMode', settings.startMode);
   ui.confirmClose.setChecked(settings.confirmClose);
+  ui.contextMenu.setChecked(settings.contextMenu);
+  renderMenuStatus();
 
   setSegmented('setCursorStyle', settings.cursorStyle);
   ui.cursorBlink.setChecked(settings.cursorBlink);
@@ -1581,7 +1654,7 @@ function changeSetting(key, value) {
   if (['cursorStyle', 'cursorBlink', 'lineHeight', 'scrollback'].includes(key)) {
     forEachPane((p) => { p.term.options[key] = value; p.fitSoon(); });
   }
-  if (['confirmClose', 'startMode'].includes(key)) syncMain();
+  if (['confirmClose', 'startMode', 'contextMenu'].includes(key)) syncMain();
   renderSettings();
 }
 
@@ -1846,5 +1919,6 @@ api.onConfirmClose(async (count) => {
   applyTheme();
   renderFontControls();
   await loadFont();
-  await newTab();
+  api.getMenuStatus().then((s) => { menuStatus = s; renderMenuStatus(); });
+  await openRequest(await api.takeLaunch());
 })();

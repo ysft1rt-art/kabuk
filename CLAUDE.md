@@ -52,6 +52,32 @@ yalnızca `transform` ile kayılır; bırakınca `tabs` dizisi ve DOM sırası b
 yeni sekmenin paneli `openedFrom` = önceki sekme. O panele henüz tuş basılmadıysa/yapıştırılmadıysa (`touched`)
 Ctrl+Z onu kapatıp geri döner; yoksa (`undoTarget()` null) tuş engellenmez ve programa gider (PowerShell'de geri alma).
 
+## Sağ tık menüsü: "Kabuk ile aç" (`contextmenu/`)
+
+Klasöre (veya klasörün boş yerine) sağ tık → "Kabuk ile aç". Hiç yapay zekâ aracı yoksa tek satır (terminal açar);
+varsa alt menü: Terminal, ayraç, bulunan araçlar. Araç listesi `contextmenu/clis.txt` (`komut | ad`); hem eklenti
+hem Kabuk bu dosyayı okur. Yeni araç = bir satır.
+
+- **Kısa (Windows 11) menü:** `KabukMenu.dll` (C++, `IExplorerCommand`; araçları her menü açılışında PATH'te arar,
+  3 sn önbellek) + kimlik paketi `KabukMenu.msix` (sparse, `-ExternalLocation` = Kabuk klasörü). İmzasız paket
+  per-user kurulamıyor ("unsigned package cannot include Executable activations"), bu yüzden paket `CN=Kabuk`
+  imzalı: `build.ps1` her derlemede bellekte yeni sertifika üretir, imzalar, gizli anahtarı siler, açık kısmı
+  `KabukMenu.cer`'e yazar. Windows'un güvenmesi için kullanıcı Ayarlar > Başlangıç'taki **"Windows 11 menüsüne
+  ekle"** düğmesine basar (`menu.trust()`: UAC ile `LocalMachine\TrustedPeople`'a ekler). Bunu Claude yapmaz/test
+  etmez: güvenlik ayarı, kullanıcının onayı.
+- **Eski menü (yedek):** güven yoksa HKCU `Directory\shell`, `Directory\Background\shell`, `Drive\shell` altına
+  kayıt defteri girdileri ("Diğer seçenekleri göster"). Kısa menü kuruluyken eskisi silinir (iki kez görünmesin).
+- `contextmenu/menu.js` kurulum/kaldırma/durum (Electron'suz, doğrudan test edilebilir); main.js açılışta ve ayar
+  değişince `settings.contextMenu`'ye göre eşitler (HEADLESS'ta hiç dokunmaz).
+- Tıklayınca: `electron.exe "<kabuk>" [--kabuk-run=<komut>] "--kabuk-dir=<klasör>"`. Kabuk tek kopya çalışır
+  (`requestSingleInstanceLock`): açıksa yeni pencere değil yeni sekme (`second-instance` → `open:request`).
+  `--kabuk-run` yalnızca clis.txt'teki komutlar için kabul edilir. Komut, komut istemi görününce yazılır (`runWhenReady`).
+- DLL ya da manifest değişince: `powershell -File contextmenu\build.ps1` (Visual Studio C++ + Windows SDK gerekir),
+  manifestte ve `menu.js` `PACKAGE_VERSION`'da sürümü artır. Explorer DLL'i yüklediyse dosya kilitli olur:
+  derlemeden önce Görev Yöneticisi'nden Windows Gezgini'ni yeniden başlat. Yeni derleme yeni sertifika demek;
+  kullanıcı düğmeye bir kez daha basmalı. Eklentiyi Explorer'sız denemek için küçük bir test programıyla
+  `DllGetClassObject` → `EnumSubCommands` çağrılabilir.
+
 ## Temalar
 
 `renderer/themes.js`. Her temanın koyu ve açık hali olmak zorunda (Koyu/Açık ayarı bütün temalarda geçerli).

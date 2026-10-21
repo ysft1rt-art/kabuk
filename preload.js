@@ -20,4 +20,10 @@ contextBridge.exposeInMainWorld('kabuk', {
   pickProgram: () => ipcRenderer.invoke('dialog:program'),
   notify: (opts) => ipcRenderer.send('notify', opts),
   onNotifyClick: (cb) => ipcRenderer.on('notify:click', (_e, id) => cb(id)),
+  // "Kabuk ile aç" (sağ tık menüsü): { dir, run } — ilk açılışta takeLaunch, Kabuk açıkken onOpenRequest
+  takeLaunch: () => ipcRenderer.invoke('launch:take'),
+  onOpenRequest: (cb) => ipcRenderer.on('open:request', (_e, req) => cb(req)),
+  getMenuStatus: () => ipcRenderer.invoke('menu:status'),
+  onMenuStatus: (cb) => ipcRenderer.on('menu:status', (_e, s) => cb(s)),
+  trustMenu: () => ipcRenderer.invoke('menu:trust'),
 });
