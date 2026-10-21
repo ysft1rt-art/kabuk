@@ -25,7 +25,7 @@ const { execFile } = require('child_process');
 const INSTALLED = __dirname.includes('app.asar');
 const DIR = INSTALLED ? path.join(path.dirname(process.execPath), 'contextmenu') : __dirname;
 const PACKAGE = 'Kabuk.ContextMenu';
-const PACKAGE_VERSION = '1.0.2.0';   // package/AppxManifest.xml ile aynı
+const PACKAGE_VERSION = '1.0.3.0';   // package/AppxManifest.xml ile aynı
 // Kurulu sürümün paketinde Executable = Kabuk.exe, geliştirme klasörününkinde electron.exe (build.ps1)
 const MSIX = path.join(DIR, INSTALLED ? 'KabukMenu-app.msix' : 'KabukMenu.msix');
 const CER = path.join(DIR, 'KabukMenu.cer');
@@ -123,17 +123,16 @@ function classicScript(ctx, install, clis = []) {
       lines.push(`New-Item -Path ${psq(k + '\\command')} -Value ${psq(menuCommand(ctx, null))} -Force | Out-Null`);
       continue;
     }
-    // Alt menü: en üstte Terminal (ardından ayraç), sonra bulunan araçlar
+    // Alt menü: en üstte Terminal (ardından ayraç), sonra bulunan araçlar; simgesiz (simge yalnızca ana satırda)
     lines.push(prop(k, 'SubCommands', "''"));
     const items = [
-      { name: 'Terminal', run: null, icon, sepAfter: true },
-      ...clis.map((c) => ({ name: c.name, run: c.cmd, icon: /\.exe$/i.test(c.file) ? c.file : '' })),
+      { name: 'Terminal', run: null, sepAfter: true },
+      ...clis.map((c) => ({ name: c.name, run: c.cmd })),
     ];
     items.forEach((it, i) => {
       const sub = `${k}\\shell\\${String(i + 1).padStart(2, '0')}`;
       lines.push(`New-Item -Path ${psq(sub)} -Force | Out-Null`);
       lines.push(prop(sub, 'MUIVerb', psq(it.name)));
-      if (it.icon) lines.push(prop(sub, 'Icon', psq(it.icon)));
       if (it.sepAfter) lines.push(prop(sub, 'CommandFlags', '0x40', 'DWord'));   // ECF_SEPARATORAFTER
       lines.push(`New-Item -Path ${psq(sub + '\\command')} -Value ${psq(menuCommand(ctx, it.run))} -Force | Out-Null`);
     });
