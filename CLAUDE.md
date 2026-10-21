@@ -21,8 +21,11 @@ dosyaları (simgeler `assets\`, `contextmenu\`) gösterir, çünkü uygulamanın
   `KabukMenu.dll`'i kenara taşır (yoksa eski sürümün kaldırıcısı "File is busy" deyip güncellemeyi iptal ediyor;
   denendi), Kabuk kaldırılınca `contextmenu\uninstall.ps1` ile yalnızca bu kuruluma ait sağ tık menüsünü siler.
 - **Yayınlama:** package.json'da `version`'ı artır, commit'le, `git tag v<sürüm>` + `git push origin main v<sürüm>`.
-  GitHub Actions (`.github/workflows/release.yml`) kurulum dosyasını derleyip Releases'e koyar. (Yerelde
-  `npm run release` de aynısını yapar ama `GH_TOKEN` ister.) Push/etiket yalnızca kullanıcı isteyince.
+  GitHub Actions (`.github/workflows/release.yml`) kurulum dosyasını derleyip Releases'e koyar; sürüm notları
+  isteğe bağlı `.github/release-notes/v<sürüm>.md` (Türkçe + İngilizce). Yüklemeyi electron-builder yapmaz
+  (`--publish always` aynı etiket için birden fazla sürüm sayfası açtı); derlenen dosyalar `gh release create` ile
+  tek seferde yüklenir. Aynı etiket yeniden gönderilirse eski sürüm sayfaları silinip yeniden oluşturulur.
+  Push/etiket yalnızca kullanıcı isteyince.
 - **Güncelleme:** `updater.js` (electron-updater, kaynak GitHub Releases). Açılıştan 30 sn sonra ve 4 saatte bir
   bakar (`settings.autoUpdate`), bulursa arka planda indirir; üst çubukta `#updateBtn` çıkar (indirirken yüzde,
   hazır olunca "Güncelle"), açılır paneli `#updatePanel`. "Yeniden başlat ve güncelle" → `quitAndInstall` (sessiz

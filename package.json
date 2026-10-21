@@ -8,8 +8,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win --publish never",
-    "release": "electron-builder --win --publish always"
+    "dist": "electron-builder --win --publish never"
   },
   "type": "commonjs",
   "dependencies": {

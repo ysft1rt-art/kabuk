@@ -1,6 +1,10 @@
 # Yeni sürüm yayınlama: "v1.2.3" gibi bir etiket gönderilince (git push origin v1.2.3) GitHub kurulum
 # dosyasını Windows'ta derler ve Releases sayfasına koyar. Kurulu Kabuk'lar yeni sürümü oradan bulur.
 # Etiket, package.json'daki sürümle aynı olmalı.
+#
+# Yükleme electron-builder'a bırakılmaz: dosyaları aynı anda yüklerken aynı etiket için birden fazla
+# sürüm sayfası açabiliyor (v1.0.0'da oldu). Önce derlenir, sonra hepsi tek komutla tek sürüme yüklenir.
+# Sürüm notları için isteğe bağlı: .github/release-notes/v<sürüm>.md
 name: Sürüm yayınla
 
 on:
@@ -29,7 +33,22 @@ jobs:
           $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ("v$v" -ne "${{ github.ref_name }}") { throw "package.json sürümü ($v) etiketle (${{ github.ref_name }}) aynı değil" }
 
-      - name: Derle ve yayınla
-        run: npx electron-builder --win --publish always
+      - name: Derle
+        run: npx electron-builder --win --publish never
+
+      - name: Yayınla
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $tag = $env:TAG
+          $v = $tag.TrimStart('v')
+          # Aynı etiket için önceden açılmış sürüm sayfaları varsa (yeniden derleme) silinir; etiket kalır
+          $ids = gh api "repos/${{ github.repository }}/releases?per_page=100" --jq '.[] | select(.tag_name == env.TAG) | .id'
+          foreach ($id in @($ids)) { if ($id) { gh api -X DELETE "repos/${{ github.repository }}/releases/$id"; "silindi: $id" } }
+          $files = @("dist/Kabuk-Kurulum-$v.exe", "dist/Kabuk-Kurulum-$v.exe.blockmap", 'dist/latest.yml')
+          foreach ($f in $files) { if (-not (Test-Path $f)) { throw "bulunamadı: $f" } }
+          $notes = ".github/release-notes/$tag.md"
+          if (Test-Path $notes) { gh release create $tag @files --title $v --notes-file $notes --verify-tag }
+          else { gh release create $tag @files --title $v --generate-notes --verify-tag }
