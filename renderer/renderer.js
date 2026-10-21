@@ -67,6 +67,19 @@ for (const [k, v] of Object.entries(settings.keys)) {
 }
 function saveSettings() {
   try { localStorage.setItem('kabuk.settings', JSON.stringify(settings)); } catch {}
+  syncWarm();
+}
+
+// Ana süreç, bir sonraki açılışta ilk terminali pencereyle birlikte başlatmak için varsayılan kabuğu ve
+// başlangıç klasörünü bilir (main.js startWarm). Yalnızca değişince gönderilir
+let warmSent = '';
+function syncWarm() {
+  if (!paths.home || !settings.shell) return;   // açılış henüz bitmedi
+  const w = { startShell: settings.shell, startCwd: startCwd() || '' };
+  const key = JSON.stringify(w);
+  if (key === warmSent) return;
+  warmSent = key;
+  api.syncSettings(w);
 }
 
 // ---------- Yazı tipleri ----------
@@ -96,9 +109,15 @@ function isFontInstalled(family) {
   });
 }
 
+// Bütün sistem yazı tiplerini denemek açılışta ~30 ms sürüyor; o yüzden açılışta yalnızca seçili yazı tipi
+// denetlenir (checkFontFamily), liste açılıştan sonra boş bir anda doldurulur (detectFonts)
 function detectFonts() {
   FONTS = [...BUNDLED_FONTS, ...SYSTEM_FONTS.filter(isFontInstalled).map((f) => ({ family: f, name: f }))];
   if (!FONTS.some((f) => f.family === settings.fontFamily)) settings.fontFamily = DEFAULTS.fontFamily;
+}
+function checkFontFamily() {
+  if (BUNDLED_FONTS.some((f) => f.family === settings.fontFamily)) return;
+  if (!SYSTEM_FONTS.includes(settings.fontFamily) || !isFontInstalled(settings.fontFamily)) settings.fontFamily = DEFAULTS.fontFamily;
 }
 
 const fontStack = () => `"${settings.fontFamily}", "Cascadia Mono", Consolas, monospace`;
@@ -1673,6 +1692,7 @@ async function syncMain() {
   });
   shells = await api.listShells();
   if (!shells.some((s) => s.id === settings.shell)) settings.shell = shells[0]?.id;
+  syncWarm();
 }
 
 function setSegmented(id, value) {
@@ -2007,14 +2027,19 @@ api.onConfirmClose(async (count) => {
 // ---------- Başlat ----------
 (async () => {
   translatePage();
+  // Tema, ana süreçten bir şey beklemeden ilk çizimden önce uygulanır (pencere ilk çizimde görünür;
+  // yoksa bir an varsayılan renklerle görünüyordu)
+  applyTheme();
+  rebuildKeys();
+  checkFontFamily();
   paths = await api.getPaths();
   await syncMain();
-  detectFonts();
-  rebuildKeys();
-  applyTheme();
   renderFontControls();
   await loadFont();
   api.getMenuStatus().then((s) => { menuStatus = s; renderMenuStatus(); });
   api.getUpdateStatus().then((s) => { update = s; renderUpdate(); });
   await openRequest(await api.takeLaunch());
+  // Açılış bitti: sistem yazı tipi listesi boş bir anda doldurulur (Ayarlar > Yazı tipi)
+  const fonts = () => { detectFonts(); renderFontControls(); };
+  if (window.requestIdleCallback) requestIdleCallback(fonts, { timeout: 2000 }); else setTimeout(fonts, 500);
 })();

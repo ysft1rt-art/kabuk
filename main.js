@@ -160,11 +160,17 @@ function syncMenu() {
   return menuQueue;
 }
 
-// Ayar değişince (ve açılışta bir kez) menüyü kur/kaldır
+// Ayar değişince (ve açılıştan birkaç saniye sonra bir kez) menüyü kur/kaldır
+let menuStarted = false;
 function wantContextMenu(want) {
   if (menuWanted === want) return;
   menuWanted = want;
-  syncMenu();
+  if (menuStarted) syncMenu();
+}
+function menuStartupDone() {
+  if (menuStarted) return;
+  menuStarted = true;
+  if (menuWanted !== null) syncMenu();
 }
 
 // "Windows 11 menüsüne ekle" düğmesi: yönetici onayıyla sertifikaya güven, sonra menüyü yeniden kur
@@ -216,8 +222,9 @@ function createWindow() {
   const startMode = state.startMode || 'normal';
   let bounds = { width: 1200, height: 760 };
   if (startMode === 'remember' && state.bounds && onScreen(state.bounds)) bounds = state.bounds;
+  // Pencere, arayüz ilk kez çizilince görünür (ready-to-show); yoksa bir an boş cam pencere görünüyordu
   win = new BrowserWindow({
-    show: !HEADLESS,
+    show: false,
     ...bounds,
     minWidth: 480,
     minHeight: 300,
@@ -240,8 +247,18 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.on('focus', () => win.flashFrame(false));
-  if (!HEADLESS && (startMode === 'maximized' || (startMode === 'remember' && state.maximized))) win.maximize();
+  const maximize = startMode === 'maximized' || (startMode === 'remember' && state.maximized);
+  let shown = false;
+  const showWin = () => {
+    if (shown || HEADLESS || !win || win.isDestroyed()) return;
+    shown = true;
+    if (maximize) win.maximize(); else win.show();
+  };
+  win.once('ready-to-show', showWin);
+  setTimeout(showWin, 3000);   // arayüz takılırsa pencere yine de açılsın
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  // Sağ tık menüsü denetimi (PowerShell) açılışı yavaşlatmasın: ilk terminal açıldıktan sonra
+  win.webContents.once('did-finish-load', () => setTimeout(menuStartupDone, 3000));
   win.on('close', (e) => {
     // Birden fazla terminal açıkken yanlışlıkla kapatmaya karşı sor. Soruyu Windows'un
     // kutusu değil, uygulamanın kendi onay penceresi sorar; "kapat" derse forceClose ile döner
@@ -253,6 +270,7 @@ function createWindow() {
     writeState({ bounds: win.getNormalBounds(), maximized: win.isMaximized() });
   });
   win.on('closed', () => {
+    dropWarm();
     for (const p of ptys.values()) { try { p.kill(); } catch {} }
     ptys.clear();
     win = null;
@@ -272,6 +290,12 @@ ipcMain.handle('settings:apply', (_e, s) => {
   if (['normal', 'maximized', 'remember'].includes(s.startMode)) writeState({ startMode: s.startMode });
   if (typeof s.contextMenu === 'boolean') wantContextMenu(s.contextMenu);
   if (typeof s.autoUpdate === 'boolean') updater.setAuto(s.autoUpdate && !HEADLESS);
+  // Bir sonraki açılışta ilk terminal pencereyle birlikte başlatılsın diye: varsayılan kabuk ve klasör
+  if (typeof s.startShell === 'string') {
+    const cur = readState().warm || {};
+    const cwd = typeof s.startCwd === 'string' ? s.startCwd : '';
+    if (cur.shellId !== s.startShell || cur.cwd !== cwd) writeState({ warm: { ...cur, shellId: s.startShell, cwd } });
+  }
 });
 
 ipcMain.handle('launch:take', () => { const r = initialLaunch; initialLaunch = null; return r; });
@@ -298,35 +322,98 @@ ipcMain.handle('dialog:program', async () => {
   return r.canceled ? null : r.filePaths[0];
 });
 
+// Kabuğu başlatır. Çıktı, sahibi (renderer) belli olana kadar biriktirilir (w.buf)
+function spawnShell(s, dir, cols, rows) {
+  const p = pty.spawn(s.file, s.args, {
+    name: 'xterm-256color',
+    cols: Math.max(cols || 80, 2),
+    rows: Math.max(rows || 24, 2),
+    cwd: dir,
+    env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'Kabuk' },
+    useConptyDll: true,
+  });
+  const w = { p, shellId: s.id, dir, buf: [], exited: null, onData: null, onExit: null };
+  p.onData((d) => (w.onData ? w.onData(d) : w.buf.push(d)));
+  p.onExit((e) => { if (w.onExit) w.onExit(e); else w.exited = e; });
+  return w;
+}
+
+// ---------- Hızlı açılış: ilk terminal pencereyle birlikte başlar ----------
+// PowerShell'in açılıp komut istemini yazması yarım saniyeyi bulabiliyor. Kabuk açılır açılmaz, son
+// açılıştaki varsayılan kabuk ve klasörle (window-state.json "warm") terminal başlatılır; arayüz ilk
+// terminali isteyince bu verilir ve o ana kadar biriken çıktı gönderilir. Kabuk ya da klasör tutmazsa
+// (ayar değişmiş) kapatılıp yenisi açılır. 15 sn içinde istenmezse kapatılır.
+let warm = null;
+function startWarm() {
+  const st = readState().warm;
+  if (!st || typeof st.shellId !== 'string') return;
+  const sh = availableShells().find((s) => s.id === st.shellId);   // özel kabuklar henüz bilinmiyor: atlanır
+  if (!sh) return;
+  const where = resolveCwd(initialLaunch?.dir || st.cwd || '');
+  if (!where.ok) return;
+  const num = (v, lo, hi, d) => (Number.isInteger(v) && v >= lo && v <= hi ? v : d);
+  try {
+    warm = spawnShell(sh, where.dir, num(st.cols, 2, 1000, 120), num(st.rows, 2, 500, 30));
+  } catch { warm = null; return; }
+  warm.timer = setTimeout(dropWarm, 15000);
+}
+function dropWarm() {
+  if (!warm) return;
+  clearTimeout(warm.timer);
+  try { warm.p.kill(); } catch {}
+  warm = null;
+}
+function takeWarm(shellId, dir) {
+  const w = warm;
+  if (!w) return null;
+  warm = null;
+  clearTimeout(w.timer);
+  if (w.exited || w.shellId !== shellId || path.resolve(w.dir).toLowerCase() !== path.resolve(dir).toLowerCase()) {
+    try { w.p.kill(); } catch {}
+    return null;
+  }
+  return w;
+}
+
+let firstPty = true;
 ipcMain.handle('pty:create', (event, { shellId, cols, rows, cwd }) => {
   const shells = availableShells();
   let sh = shells.find((s) => s.id === shellId) || shells[0];
   const where = resolveCwd(cwd);
   const notes = [];
   if (!where.ok) notes.push(mt('"{cwd}" klasörü bulunamadı, kullanıcı klasöründe açıldı.', { cwd }));
-  const spawn = (s) => pty.spawn(s.file, s.args, {
-    name: 'xterm-256color',
-    cols: Math.max(cols || 80, 2),
-    rows: Math.max(rows || 24, 2),
-    cwd: where.dir,
-    env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'Kabuk' },
-    useConptyDll: true,
-  });
-  let p;
-  try {
-    p = spawn(sh);
-  } catch (err) {
-    // Özel kabuk yanlış yazılmış olabilir: ilk hazır kabukla devam et
-    notes.push(mt('"{name}" başlatılamadı ({file}). {fallback} açıldı.', { name: sh.name, file: sh.file, fallback: shells[0].name }));
-    sh = shells[0];
-    p = spawn(sh);
+  let w = takeWarm(sh.id, where.dir);
+  if (w) {
+    try { w.p.resize(Math.max(cols || 80, 2), Math.max(rows || 24, 2)); } catch {}
+  } else {
+    try {
+      w = spawnShell(sh, where.dir, cols, rows);
+    } catch (err) {
+      // Özel kabuk yanlış yazılmış olabilir: ilk hazır kabukla devam et
+      notes.push(mt('"{name}" başlatılamadı ({file}). {fallback} açıldı.', { name: sh.name, file: sh.file, fallback: shells[0].name }));
+      sh = shells[0];
+      w = spawnShell(sh, where.dir, cols, rows);
+    }
+  }
+  // İlk terminalin boyutu bir sonraki açılışta önceden başlatılan terminal için saklanır
+  if (firstPty) {
+    firstPty = false;
+    const cur = readState().warm || {};
+    if (cur.cols !== cols || cur.rows !== rows) writeState({ warm: { ...cur, cols, rows } });
   }
   const id = nextPtyId++;
-  ptys.set(id, p);
-  p.onData((data) => event.sender.isDestroyed() || event.sender.send('pty:data', id, data));
-  p.onExit(({ exitCode }) => {
+  ptys.set(id, w.p);
+  const send = (data) => event.sender.isDestroyed() || event.sender.send('pty:data', id, data);
+  const exit = ({ exitCode }) => {
     ptys.delete(id);
     if (!event.sender.isDestroyed()) event.sender.send('pty:exit', id, exitCode);
+  };
+  // Biriken çıktı, renderer bu terminalin numarasını öğrendikten sonra (bu cevaptan sonra) sırayla gönderilir
+  setImmediate(() => {
+    if (w.buf.length) send(w.buf.join(''));
+    w.buf = [];
+    w.onData = send;
+    if (w.exited) exit(w.exited); else w.onExit = exit;
   });
   return { id, name: sh.name, shellId: sh.id, notes };
 });
@@ -406,6 +493,7 @@ if (gotLock) app.whenReady().then(() => {
   // Geliştirme klasöründen açılan Kabuk kurulu olanı bulabilsin (installedElsewhere)
   if (app.isPackaged && !HEADLESS) writeState({ installedExe: process.execPath });
   ensureShortcuts();
+  startWarm();
   createWindow();
 });
 app.on('window-all-closed', () => app.quit());

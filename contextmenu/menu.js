@@ -49,16 +49,23 @@ function readCliList() {
 }
 
 // PATH'te bulunan araçlar (menü eklentisi de aynı aramayı her açılışta kendisi yapar)
+// Her klasör bir kez okunur (araç × klasör × uzantı başına ayrı dosya sorgusu ~2500 sorgu ve 150 ms sürüyordu)
 function detectClis(envPath = process.env.PATH || '') {
   const dirs = [...new Set(envPath.split(';').map((d) => d.trim().replace(/^"|"$/g, '')).filter(Boolean))];
+  const listing = dirs.map((d) => {
+    try { return new Set(fs.readdirSync(d).map((n) => n.toLowerCase())); } catch { return new Set(); }
+  });
   const found = [];
   for (const c of readCliList()) {
-    for (const d of dirs) {
-      const file = ['.exe', '.cmd', '.bat', '.ps1', '.com'].map((e) => path.join(d, c.cmd + e)).find((f) => {
-        try { return fs.statSync(f).isFile(); } catch { return false; }
-      });
-      if (file) { found.push({ ...c, file }); break; }
+    let file = null;
+    for (let i = 0; i < dirs.length && !file; i++) {
+      for (const e of ['.exe', '.cmd', '.bat', '.ps1', '.com']) {
+        if (!listing[i].has((c.cmd + e).toLowerCase())) continue;
+        const f = path.join(dirs[i], c.cmd + e);
+        try { if (fs.statSync(f).isFile()) { file = f; break; } } catch {}
+      }
     }
+    if (file) found.push({ ...c, file });
   }
   return found;
 }

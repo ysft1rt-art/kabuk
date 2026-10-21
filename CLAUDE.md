@@ -40,6 +40,22 @@ dosyaları (simgeler `assets\`, `contextmenu\`) gösterir, çünkü uygulamanın
   güncellemeden sonra kurulum programı Kabuk'u Gezgin üzerinden açtığı için ortam değişkenleri kaybolur ve gizli
   olmayan kopya kullanıcının sağ tık menüsünü değiştirir.
 
+## Açılış hızı
+
+- **İlk terminal pencereyle birlikte başlar** (main.js `startWarm`): son açılıştaki varsayılan kabuk, klasör ve
+  boyut window-state.json `warm`'da (renderer `syncWarm` değişince gönderir). Arayüzün ilk `pty:create`'i
+  kabuk + klasör tutarsa bu terminali alır (`takeWarm`), biriken çıktı cevaptan sonra (`setImmediate`) gönderilir;
+  tutmazsa kapatılıp yenisi açılır. Özel kabuklar önceden başlatılmaz (açılışta henüz bilinmiyorlar).
+- Pencere `ready-to-show`'da görünür (3 sn yedek); tema ilk çizimden önce uygulanır (başlangıç sırası renderer sonu).
+- Sağ tık menüsü eşitlemesi (PowerShell) sayfa yüklendikten 3 sn sonra başlar (`menuStartupDone`).
+  `detectClis` her PATH klasörünü bir kez okur (eskiden 2.500 dosya sorgusu, 150 ms ana süreç kilidi).
+- Sistem yazı tipleri açılıştan sonra boş anda taranır (`detectFonts`); açılışta yalnızca seçili olan (`checkFontFamily`).
+- Ölçüm: ipcMain.handle ve node-pty'yi saran bir betikle (`require` öncesi), CPU profili için `webContents.debugger` +
+  `Profiler`. Kalan sürenin çoğu PowerShell'in kendi açılışı (~450 ms, Electron'la aynı anda ~700 ms).
+
+Görev çubuğu simgesi: Windows, pencerenin kimliğine (AUMID `Kabuk`) sahip Başlat menüsü kısayolunun simgesini
+kullanır. Aynı kimlikle başka bir kısayol varsa (2026-10-21: eski `Electron.lnk`) Electron simgesi görünür.
+
 ## Arayüz kuralı: Chromium'un hazır öğeleri yok
 
 Uygulamanın hiçbir yerinde tarayıcının klasik/hazır öğeleri kullanılmaz:
