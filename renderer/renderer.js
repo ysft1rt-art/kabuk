@@ -329,7 +329,10 @@ class Pane {
     // Bildirim sinyalleri: zil (BEL), OSC 9 (iTerm2 / Codex), OSC 777;notify (Ghostty biçimi, Claude Code)
     this.term.onBell(() => attend(this, { bell: true }));
     this.term.parser.registerOscHandler(9, (d) => {
-      if (/^\d+(;|$)/.test(d)) return false;   // ConEmu komutları (9;4 ilerleme çubuğu, 9;9 klasör) bildirim değil
+      // 9;9: kabuk bulunduğu klasörü bildiriyor (main.js shellLaunch); bölünen panel burada açılır
+      const cwd = /^9;"?([^"]*)"?$/.exec(d);
+      if (cwd) { this.cwd = cwd[1] || null; return true; }
+      if (/^\d+(;|$)/.test(d)) return false;   // ConEmu komutları (9;4 ilerleme çubuğu) bildirim değil
       attend(this, { body: d });
       return true;
     });
@@ -1057,6 +1060,8 @@ function startCwd() {
 // "PS C:\x>" (PowerShell), "C:\x>" (CMD), "ad@pc UCRT64 ~/x" (Git Bash, bir üst satırda)
 const BASH_ENV = 'MINGW(?:64|32)|UCRT64|CLANG(?:64|32|ARM64)|MSYS';
 function paneCwd(pane) {
+  // Kabuğun kendi bildirdiği klasör (OSC 9;9), program çalışırken de geçerli
+  if (pane.cwd) return pane.cwd;
   // Git Bash pencere başlığına "UCRT64:/c/Users/x" yazar; en güvenilir kaynak bu
   const m = new RegExp(`^(?:${BASH_ENV}):(.+)$`).exec(pane.title || '');
   if (m) return bashToWindows(m[1].trim());

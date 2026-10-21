@@ -322,14 +322,31 @@ ipcMain.handle('dialog:program', async () => {
   return r.canceled ? null : r.filePaths[0];
 });
 
+// Kabuk, klasör her değiştiğinde (komut istemi her yazıldığında) bulunduğu klasörü görünmez bir
+// OSC 9;9 koduyla bildirir; bölünen panel bu klasörde açılır. Ekrandan okumak, bir program çalışırken
+// (komut satırı görünmüyorken) işe yaramıyordu. Kullanıcının kendi istemi (profil, oh-my-posh) korunur.
+const PS_CWD_HOOK = Buffer.from(
+  '$global:__kabukPrompt = $function:prompt; function global:prompt { ' +
+  '$l = $executionContext.SessionState.Path.CurrentLocation; $p = & $global:__kabukPrompt; ' +
+  'if ($l.Provider.Name -eq "FileSystem") { "$([char]27)]9;9;`"$($l.ProviderPath)`"$([char]7)" + $p } else { $p } }',
+  'utf16le').toString('base64');
+function shellLaunch(s) {
+  const env = { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'Kabuk' };
+  if (s.custom) return { args: s.args, env };
+  if (s.id === 'pwsh' || s.id === 'powershell') return { args: [...s.args, '-NoExit', '-EncodedCommand', PS_CWD_HOOK], env };
+  if (s.id === 'cmd' && !process.env.PROMPT) env.PROMPT = '$E]9;9;"$P"$E\\$P$G';
+  return { args: s.args, env };
+}
+
 // Kabuğu başlatır. Çıktı, sahibi (renderer) belli olana kadar biriktirilir (w.buf)
 function spawnShell(s, dir, cols, rows) {
-  const p = pty.spawn(s.file, s.args, {
+  const { args, env } = shellLaunch(s);
+  const p = pty.spawn(s.file, args, {
     name: 'xterm-256color',
     cols: Math.max(cols || 80, 2),
     rows: Math.max(rows || 24, 2),
     cwd: dir,
-    env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'Kabuk' },
+    env,
     useConptyDll: true,
   });
   const w = { p, shellId: s.id, dir, buf: [], exited: null, onData: null, onExit: null };
