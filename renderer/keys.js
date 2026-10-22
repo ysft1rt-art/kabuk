@@ -38,6 +38,8 @@ window.KabukKeys = (() => {
 
     { id: 'copy', group: 'text', name: 'Kopyala', term: true, keys: ['Ctrl+Shift+C'] },
     { id: 'paste', group: 'text', name: 'Yapıştır', term: true, keys: ['Ctrl+V', 'Ctrl+Shift+V'] },
+    { id: 'find', group: 'text', name: 'Terminalde ara', keys: ['Ctrl+F', 'Ctrl+Shift+F'],
+      desc: 'Enter yukarıdaki, Shift+Enter aşağıdaki eşleşmeye gider. Esc kapatır.' },
     { id: 'fontUp', group: 'text', name: 'Yazıyı büyüt', keys: ['Ctrl+=', 'Ctrl++'] },
     { id: 'fontDown', group: 'text', name: 'Yazıyı küçült', keys: ['Ctrl+-'] },
     { id: 'fontReset', group: 'text', name: 'Yazı boyutunu sıfırla', keys: ['Ctrl+0'] },

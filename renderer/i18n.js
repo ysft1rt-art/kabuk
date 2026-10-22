@@ -302,6 +302,16 @@ const EN = {
   'Yazıyı büyüt': 'Increase font size',
   'Yazıyı küçült': 'Decrease font size',
   'Yazı boyutunu sıfırla': 'Reset font size',
+  'Terminalde ara': 'Find in terminal',
+  'Enter yukarıdaki, Shift+Enter aşağıdaki eşleşmeye gider. Esc kapatır.': 'Enter goes to the match above, Shift+Enter to the one below. Esc closes.',
+
+  // Terminalde arama çubuğu
+  'Ara': 'Find',
+  'Sonuç yok': 'No results',
+  'Büyük/küçük harfe dikkat et': 'Match case',
+  'Yukarıdaki eşleşme (Enter)': 'Match above (Enter)',
+  'Aşağıdaki eşleşme (Shift+Enter)': 'Match below (Shift+Enter)',
+  'Kapat (Esc)': 'Close (Esc)',
 
   // Ayarlar: Kabuklar
   'Varsayılan': 'Default',

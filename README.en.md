@@ -41,6 +41,7 @@
 - **Tabs:** Reorder by dragging, switch with Ctrl+Tab.
 - **Hidden terminals:** Hide a pane without closing it. It keeps running in the background and comes back from the "Hidden" button in the top bar.
 - **Undo with Ctrl+Z:** Opened a new pane by mistake? If you haven't typed in it yet, Ctrl+Z closes it.
+- **Find in terminal:** `Ctrl+F` searches the output; every match is highlighted and you see which one you're on. Enter goes up, Shift+Enter goes down.
 - **26 themes:** Each with a dark and a light variant (Kar, Catppuccin, Nord, Rosé Pine, Kanagawa, Solarized, One Dark / Light and more). Dark/light can follow Windows.
 - **Frosted glass:** A blurred, translucent window background with adjustable intensity.
 - **Fonts:** JetBrains Mono, Geist Mono, Fira Code and Source Code Pro are bundled; installed fonts such as Cascadia can be selected too.
@@ -91,6 +92,7 @@ All shortcuts can be changed in **Settings → Shortcuts**, and an action can ha
 | Next / previous tab | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
 | Settings | `Ctrl+,` |
 | Copy | `Ctrl+Shift+C` |
+| Find in terminal | `Ctrl+F` |
 | Paste | `Ctrl+V` / `Ctrl+Shift+V` |
 | Bigger / smaller / reset font | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` |
 

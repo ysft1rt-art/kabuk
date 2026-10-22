@@ -198,6 +198,30 @@ function termTheme() {
   return tt;
 }
 
+// Arama eşleşmelerinin renkleri: temanın sarısı (tüm eşleşmeler) ve vurgu rengi (bulunan yer),
+// zemin rengiyle karıştırılır ki yazı okunur kalsın. Eklenti yalnızca #RRGGBB kabul ediyor
+const SEARCH_LIMIT = 1000;
+function mixHex(a, b, amount) {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  if (!/^#[0-9a-f]{6}/i.test(a) || !/^#[0-9a-f]{6}/i.test(b)) return a.slice(0, 7);
+  const [x, y] = [p(a), p(b)];
+  return '#' + x.map((v, i) => Math.round(v * amount + y[i] * (1 - amount)).toString(16).padStart(2, '0')).join('');
+}
+function searchColors() {
+  const th = resolveTheme();
+  const ui = uiColors();
+  const bg = settings.pureBlack && !th.light ? '#000000' : th.term.background;
+  const yellow = th.term.yellow, accent = ui.accent;
+  return {
+    matchBackground: mixHex(yellow, bg, th.light ? 0.28 : 0.32),
+    matchBorder: mixHex(yellow, bg, 0.6),
+    matchOverviewRuler: yellow.slice(0, 7),
+    activeMatchBackground: mixHex(accent, bg, th.light ? 0.35 : 0.5),
+    activeMatchBorder: accent.slice(0, 7),
+    activeMatchColorOverviewRuler: accent.slice(0, 7),
+  };
+}
+
 // Ayarlar > Animasyonlar: kapalıyken CSS animasyonları anında biter (styles.css body.no-anim), animate() beklemez
 function applyAnimations() {
   document.body.classList.toggle('no-anim', !settings.animations);
@@ -225,7 +249,7 @@ function applyTheme() {
   root.setProperty('--border', ui.border);
   document.body.classList.toggle('light', !!th.light);
   // Saydamlık yalnızca buzlu camda: kapalıyken harfler zemin rengine göre çizilir, daha keskin ve koyu görünür
-  forEachPane((p) => { p.term.options.allowTransparency = a; p.term.options.theme = termTheme(); });
+  forEachPane((p) => { p.term.options.allowTransparency = a; p.term.options.theme = termTheme(); p.refreshSearch(); });
   // Windows'un camı ve pencere düğmeleri de temanın moduna uysun
   api.setChrome({ symbolColor: ui.fg, acrylic: a, scheme: settings.mode === 'auto' ? 'system' : settings.mode });
   renderAppearance();
@@ -331,6 +355,11 @@ class Pane {
     // Ekrandaki yazıları renkleriyle metne çevirir (oturumu hatırlama)
     this.serializer = new SerializeAddon.SerializeAddon();
     this.term.loadAddon(this.serializer);
+    // Terminalde arama (Ctrl+F): eşleşmeleri boyar, sayıyı arama çubuğuna yazar
+    this.search = new SearchAddon.SearchAddon({ highlightLimit: SEARCH_LIMIT });
+    this.term.loadAddon(this.search);
+    this.search.onDidChangeResults((r) => this.showSearchCount(r));
+    this.searchBar = null;    // ilk Ctrl+F'te kurulur
     this.term.unicode.activeVersion = '11';
     this.term.open(host);
     this.host = host;
@@ -383,6 +412,8 @@ class Pane {
 
     this.el.addEventListener('mousedown', () => focusPane(this), true);
     this.term.onSelectionChange(() => {
+      // Arama bulduğu yeri seçerek gösterir; bu seçim panoya kopyalanmasın
+      if (this.searchOpen) return;
       if (settings.copyOnSelect && this.term.hasSelection()) api.writeClipboard(this.term.getSelection());
     });
     this.el.addEventListener('contextmenu', (e) => {
@@ -619,6 +650,103 @@ class Pane {
     if (this._fitQueued) return;
     this._fitQueued = true;
     requestAnimationFrame(() => { this._fitQueued = false; this.fitNow(); });
+  }
+
+  // ---------- Arama ----------
+  buildSearchBar() {
+    const bar = document.createElement('div');
+    bar.className = 'search-bar';
+    bar.innerHTML = `
+      <input class="search-input" type="text" spellcheck="false" autocomplete="off">
+      <span class="search-count"></span>
+      <button class="search-btn search-case" data-tip="Büyük/küçük harfe dikkat et">Aa</button>
+      <button class="search-btn search-prev" data-tip="Yukarıdaki eşleşme (Enter)"><svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></svg></button>
+      <button class="search-btn search-next" data-tip="Aşağıdaki eşleşme (Shift+Enter)"><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></button>
+      <button class="search-btn search-close" data-tip="Kapat (Esc)"><svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg></button>`;
+    this.searchInput = bar.querySelector('.search-input');
+    this.searchCount = bar.querySelector('.search-count');
+    this.searchCase = false;
+    // Panelin mousedown'ı (önce çalışır) terminale odaklanır; çubuğa tıklayınca odak yazı kutusuna dönsün
+    bar.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      if (e.target !== this.searchInput) { e.preventDefault(); this.searchInput.focus(); }
+    });
+    this.searchInput.addEventListener('input', () => this.runSearch(-1, true));
+    this.searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.closeSearch(); }
+      else if (e.key === 'Enter') { e.preventDefault(); this.runSearch(e.shiftKey ? 1 : -1); }
+    });
+    const caseBtn = bar.querySelector('.search-case');
+    caseBtn.addEventListener('click', () => {
+      this.searchCase = !this.searchCase;
+      caseBtn.classList.toggle('on', this.searchCase);
+      this.refreshSearch();
+    });
+    bar.querySelector('.search-prev').addEventListener('click', () => this.runSearch(-1));
+    bar.querySelector('.search-next').addEventListener('click', () => this.runSearch(1));
+    bar.querySelector('.search-close').addEventListener('click', () => this.closeSearch());
+    this.el.appendChild(bar);
+    this.searchBar = bar;
+  }
+
+  openSearch() {
+    if (!this.searchBar) this.buildSearchBar();
+    // Seçili tek satırlık yazı varsa onu ara
+    const sel = this.term.hasSelection() ? this.term.getSelection().trim() : '';
+    const wasOpen = this.searchOpen;
+    this.searchOpen = true;
+    this.searchInput.placeholder = t('Ara');   // dil değişmiş olabilir
+    if (sel && !sel.includes('\n') && sel !== this.searchInput.value) this.searchInput.value = sel;
+    if (!wasOpen) {
+      this.searchBar.classList.add('open');
+      this.el.classList.add('searching');
+      animate(this.searchBar, 'pop-in');
+    }
+    this.searchInput.focus();
+    this.searchInput.select();
+    if (this.searchInput.value) this.runSearch(-1, true);
+  }
+
+  closeSearch() {
+    if (!this.searchOpen) return;
+    this.searchOpen = false;
+    this.search.clearDecorations();
+    this.term.clearSelection();
+    this.searchBar.classList.remove('open');
+    this.el.classList.remove('searching');
+    this.term.focus();
+  }
+
+  // dir -1: yukarı (eskiye), 1: aşağı. live: yazarken, bulunan yer hâlâ uyuyorsa yerinde kalır
+  runSearch(dir, live = false) {
+    if (!this.searchOpen) return;
+    const q = this.searchInput.value;
+    if (!q) {
+      this.search.clearDecorations();
+      this.term.clearSelection();
+      this.showSearchCount(null);
+      return;
+    }
+    const opts = { caseSensitive: this.searchCase, incremental: live, decorations: searchColors() };
+    if (dir < 0) this.search.findPrevious(q, opts); else this.search.findNext(q, opts);
+  }
+
+  // Eklenti aynı kelime için eski boyamayı tutuyor (seçenek değişse de); renk ya da Aa değişince baştan boyat
+  refreshSearch() {
+    if (!this.searchOpen) return;
+    this.search.clearDecorations();
+    this.runSearch(-1, true);
+  }
+
+  showSearchCount(r) {
+    if (!this.searchBar) return;
+    const el = this.searchCount;
+    const none = !!r && r.resultCount === 0 && !!this.searchInput.value;
+    this.searchBar.classList.toggle('no-match', none);
+    if (!r || !this.searchInput.value) el.textContent = '';
+    else if (none) el.textContent = t('Sonuç yok');
+    else if (r.resultIndex < 0) el.textContent = r.resultCount >= SEARCH_LIMIT ? `${SEARCH_LIMIT}+` : String(r.resultCount);
+    else el.textContent = `${r.resultIndex + 1}/${r.resultCount >= SEARCH_LIMIT ? SEARCH_LIMIT + '+' : r.resultCount}`;
   }
 
   dispose() {
@@ -1513,6 +1641,7 @@ const RUN = {
     if (term?.hasSelection()) api.writeClipboard(term.getSelection());
   },
   paste: () => activeTab?.activePane?.paste(),
+  find: () => activeTab?.activePane?.openSearch(),
   fontUp: () => setFontSize(settings.fontSize + 1),
   fontDown: () => setFontSize(settings.fontSize - 1),
   fontReset: () => setFontSize(DEFAULTS.fontSize),

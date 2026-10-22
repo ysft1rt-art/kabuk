@@ -197,6 +197,14 @@ oynar (`renderer/fun.js`). Karar Enter anında ekrana bakılarak verilir (`tryLi
 değilse Enter kabuğa normal gider. Alt satıra taşan uzun istemler birleştirilir (`lineBeforeCursor`). Kelimeler
 büyük/küçük harf ve Türkçe harf farkı gözetmeden eşleşir (`funScene`).
 
+## Terminalde arama (Ctrl+F)
+
+`@xterm/addon-search`; her panelin kendi arama çubuğu (`Pane.buildSearchBar`, ilk Ctrl+F'te kurulur, panelin sağ
+üstünde; açıkken `.pane-actions` gizli). Enter yukarı (eskiye), Shift+Enter aşağı; yazarken en alttaki eşleşmeden
+başlar. Renkler `searchColors()` (temanın sarısı + vurgu rengi, zeminle karıştırılmış; eklenti yalnızca #RRGGBB alır).
+Eklentinin hatası: aynı kelimede seçenek (Aa) ya da renk değişince eski boyamayı tutuyor, bu yüzden `refreshSearch()`
+önce `clearDecorations()` çağırır. Arama bulduğu yeri seçerek gösterir: açıkken `copyOnSelect` panoya yazmaz (`searchOpen`).
+
 ## Takma adlar
 
 Ayarlar > Takma adlar (`settings.aliases`: `{ name, command }`). Enter'da satırın ilk kelimesi bir takma adsa

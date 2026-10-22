@@ -246,6 +246,78 @@ body.tab-dragging, body.tab-dragging * { cursor: default !important; }
 .pane-hide:hover { color: var(--accent); border-color: var(--accent); }
 .pane-close:hover { color: #fff; background: #e5484d; border-color: #e5484d; }
 
+/* Terminalde arama çubuğu (Ctrl+F): panelin sağ üstünde; açıkken panel düğmeleri gizlenir */
+.pane.searching .pane-actions { display: none; }
+.search-bar {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 21;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100% - 16px);
+  padding: 3px 3px 3px 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--popover, var(--bar));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .22);
+}
+.search-bar.open { display: flex; }
+.search-bar.pop-in { animation: pop-in .16s cubic-bezier(.2, .8, .2, 1); }
+.search-input {
+  width: 190px;
+  min-width: 60px;
+  flex: 0 1 190px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--tab-active);
+  color: var(--fg);
+  caret-color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  user-select: text;
+}
+.search-input::placeholder { color: var(--dim); opacity: .8; }
+.search-input:focus { border-color: var(--accent); }
+.search-bar.no-match .search-input { border-color: #e5484d; }
+.search-count {
+  min-width: 52px;
+  padding: 0 6px;
+  color: var(--dim);
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.search-bar.no-match .search-count { color: #e5484d; }
+.search-btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dim);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: color .15s, background .15s;
+}
+.search-btn:hover { background: var(--tab-hover); color: var(--fg); }
+.search-btn.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.search-btn svg {
+  width: 14px; height: 14px;
+  fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+.search-close svg { width: 12px; height: 12px; }
+
 /* Sekme çubuğundaki "Gizli" düğmesi */
 .hidden-chip {
   -webkit-app-region: no-drag;

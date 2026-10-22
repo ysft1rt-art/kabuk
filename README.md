@@ -39,6 +39,7 @@
 - **Sekmeler:** Sürükleyerek sırala, Ctrl+Tab ile aralarında gez.
 - **Gizli terminaller:** Bir paneli kapatmadan gizle; arka planda çalışmaya devam eder, üst çubuktaki "Gizli" düğmesinden geri getirilir.
 - **Ctrl+Z ile geri al:** Yanlışlıkla açtığın yeni paneli, içine bir şey yazmadıysan Ctrl+Z ile kapatırsın.
+- **Terminalde arama:** `Ctrl+F` ile çıktının içinde ara; bütün eşleşmeler boyanır, kaçıncısında olduğun görünür. Enter yukarı, Shift+Enter aşağı gider.
 - **26 tema:** Her birinin koyu ve açık hali var (Kar, Catppuccin, Nord, Rosé Pine, Kanagawa, Solarized, One Dark / Light ve daha fazlası). Koyu/açık seçimi Windows'a uyabilir.
 - **Buzlu cam efekti:** Pencerenin arkası bulanık ve yarı saydam görünür; yoğunluğu ayarlanabilir.
 - **Yazı tipleri:** JetBrains Mono, Geist Mono, Fira Code ve Source Code Pro uygulamayla birlikte gelir; bilgisayarındaki Cascadia gibi yazı tipleri de seçilebilir.
@@ -89,6 +90,7 @@ Bütün kısayollar **Ayarlar → Kısayollar** bölümünden değiştirilebilir
 | Sonraki / önceki sekme | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
 | Ayarlar | `Ctrl+,` |
 | Kopyala | `Ctrl+Shift+C` |
+| Terminalde ara | `Ctrl+F` |
 | Yapıştır | `Ctrl+V` / `Ctrl+Shift+V` |
 | Yazıyı büyüt / küçült / sıfırla | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` |
 
