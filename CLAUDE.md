@@ -205,6 +205,14 @@ başlar. Renkler `searchColors()` (temanın sarısı + vurgu rengi, zeminle kar�
 Eklentinin hatası: aynı kelimede seçenek (Aa) ya da renk değişince eski boyamayı tutuyor, bu yüzden `refreshSearch()`
 önce `clearDecorations()` çağırır. Arama bulduğu yeri seçerek gösterir: açıkken `copyOnSelect` panoya yazmaz (`searchOpen`).
 
+## Paneli büyütme (Ctrl+Shift+Z)
+
+`toggleZoom` / `setZoom(tab, pane)`: ağaç değişmez; panel `.zoom-target` ile sekmeyi kaplar (absolute), yerinde aynı
+`flex`'li `.zoom-hole` kalır, diğer paneller ve ayraçlar `visibility: hidden`. Böylece arkadakiler yeniden boyutlanmaz
+(Claude Code ekranı karışmaz). Bölme, kapatma, gizleme, gizliyi geri açma önce `unzoom`; başka panele odaklanma da
+büyütmeyi kaldırır, yalnızca Ctrl+Alt+ok (`moveFocus`) büyütmeyi yeni panele taşır. Tek panelde bir şey yapmaz.
+Oturuma kaydedilmez.
+
 ## Takma adlar
 
 Ayarlar > Takma adlar (`settings.aliases`: `{ name, command }`). Enter'da satırın ilk kelimesi bir takma adsa

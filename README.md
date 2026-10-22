@@ -38,6 +38,7 @@
 - **Bölünmüş paneller:** Ekranı sağa, sola, yukarı ve aşağı istediğin kadar böl; panel kenarlarını sürükleyerek boyutlandır.
 - **Sekmeler:** Sürükleyerek sırala, Ctrl+Tab ile aralarında gez.
 - **Gizli terminaller:** Bir paneli kapatmadan gizle; arka planda çalışmaya devam eder, üst çubuktaki "Gizli" düğmesinden geri getirilir.
+- **Paneli büyütme:** Bölünmüş ekranda `Ctrl+Shift+Z` ile seçili panel bütün sekmeyi kaplar, aynı tuşla eski düzene döner. Diğer paneller arkada çalışmaya devam eder.
 - **Ctrl+Z ile geri al:** Yanlışlıkla açtığın yeni paneli, içine bir şey yazmadıysan Ctrl+Z ile kapatırsın.
 - **Terminalde arama:** `Ctrl+F` ile çıktının içinde ara; bütün eşleşmeler boyanır, kaçıncısında olduğun görünür. Enter yukarı, Shift+Enter aşağı gider.
 - **26 tema:** Her birinin koyu ve açık hali var (Kar, Catppuccin, Nord, Rosé Pine, Kanagawa, Solarized, One Dark / Light ve daha fazlası). Koyu/açık seçimi Windows'a uyabilir.
@@ -87,6 +88,7 @@ Bütün kısayollar **Ayarlar → Kısayollar** bölümünden değiştirilebilir
 | Yeni sekme | `Ctrl+Shift+T` |
 | Paneli kapat | `Ctrl+Shift+W` |
 | Paneli gizle | `Ctrl+Shift+H` |
+| Paneli büyüt / eski boyutuna döndür | `Ctrl+Shift+Z` |
 | Sonraki / önceki sekme | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
 | Ayarlar | `Ctrl+,` |
 | Kopyala | `Ctrl+Shift+C` |

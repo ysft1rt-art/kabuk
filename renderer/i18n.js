@@ -303,6 +303,12 @@ const EN = {
   'Yazıyı küçült': 'Decrease font size',
   'Yazı boyutunu sıfırla': 'Reset font size',
   'Terminalde ara': 'Find in terminal',
+  'Paneli büyüt / eski boyutuna döndür': 'Maximize / restore pane',
+  'Bölünmüş ekranda seçili panel bütün sekmeyi kaplar; diğerleri arkada çalışmaya devam eder.': 'In a split view the selected pane fills the whole tab; the others keep running behind it.',
+  'Paneli büyüt': 'Maximize pane',
+  'Eski boyutuna döndür': 'Restore pane',
+  'Panel büyütüldü. Eski düzene dönmek için {key}': 'Pane maximized. Press {key} to restore the layout',
+  'Panel büyütüldü. Eski düzene dönmek için sağ üstteki düğme': 'Pane maximized. Use the button at the top right to restore the layout',
   'Enter yukarıdaki, Shift+Enter aşağıdaki eşleşmeye gider. Esc kapatır.': 'Enter goes to the match above, Shift+Enter to the one below. Esc closes.',
 
   // Terminalde arama çubuğu

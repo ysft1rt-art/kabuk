@@ -31,6 +31,8 @@ window.KabukKeys = (() => {
 
     { id: 'newTab', group: 'tabs', name: 'Yeni sekme', keys: ['Ctrl+Shift+T'] },
     { id: 'closePane', group: 'tabs', name: 'Paneli kapat', keys: ['Ctrl+Shift+W'] },
+    { id: 'toggleZoom', group: 'tabs', name: 'Paneli büyüt / eski boyutuna döndür', keys: ['Ctrl+Shift+Z'],
+      desc: 'Bölünmüş ekranda seçili panel bütün sekmeyi kaplar; diğerleri arkada çalışmaya devam eder.' },
     { id: 'hidePane', group: 'tabs', name: 'Paneli gizle', desc: 'Kapanmaz, arka planda çalışmaya devam eder.', keys: ['Ctrl+Shift+H'] },
     { id: 'nextTab', group: 'tabs', name: 'Sonraki sekme', keys: ['Ctrl+Tab'] },
     { id: 'prevTab', group: 'tabs', name: 'Önceki sekme', keys: ['Ctrl+Shift+Tab'] },

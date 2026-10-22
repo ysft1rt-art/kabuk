@@ -246,6 +246,21 @@ body.tab-dragging, body.tab-dragging * { cursor: default !important; }
 .pane-hide:hover { color: var(--accent); border-color: var(--accent); }
 .pane-close:hover { color: #fff; background: #e5484d; border-color: #e5484d; }
 
+/* Büyütülmüş panel (Ctrl+Shift+Z): sekmenin tamamını kaplar. Diğer paneller ve ayraçlar yerinde, aynı boyutta
+   görünmez bekler (yeniden boyutlanmasınlar diye); büyütülen panelin yerinde boş bir yer tutucu (.zoom-hole) kalır */
+.zoom-hole { min-width: 0; min-height: 0; }
+.tab-content.zoomed .pane:not(.zoom-target),
+.tab-content.zoomed .divider { visibility: hidden; }
+.pane.zoom-target { position: absolute; inset: 0; z-index: 5; }
+.tab-content.zoomed .pane.zoom-target::after { display: none; }
+.pane.zoom-in { animation: zoom-in .18s ease-out; }
+@keyframes zoom-in { from { opacity: .4; } }
+.pane-zoom .ico-shrink, .zoom-target .pane-zoom .ico-grow { display: none; }
+.zoom-target .pane-zoom .ico-shrink { display: block; }
+.pane-zoom:hover, .zoom-target .pane-zoom { color: var(--accent); border-color: var(--accent); }
+/* Sekmedeki panel sayısı büyütülmüşken vurgu renginde: arkada başka paneller olduğunu hatırlatır */
+.tab.zoomed .tab-badge { background: var(--accent); color: var(--tab-active); }
+
 /* Terminalde arama çubuğu (Ctrl+F): panelin sağ üstünde; açıkken panel düğmeleri gizlenir */
 .pane.searching .pane-actions { display: none; }
 .search-bar {

@@ -402,9 +402,11 @@ class Pane {
     const actions = document.createElement('div');
     actions.className = 'pane-actions';
     actions.innerHTML = `
+      <button class="pane-btn pane-zoom" data-key-action="toggleZoom" data-tip-text="Paneli büyüt"><svg class="ico-grow" viewBox="0 0 16 16"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5L9 7M2.5 13.5L7 9"/></svg><svg class="ico-shrink" viewBox="0 0 16 16"><path d="M13.5 6.5h-4v-4M2.5 9.5h4v4M9.5 6.5l4-4M6.5 9.5l-4 4"/></svg></button>
       <button class="pane-btn pane-hide" data-key-action="hidePane" data-tip-text="Paneli gizle" data-tip-more=" — kapanmaz, arka planda çalışır"><svg viewBox="0 0 16 16"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"/><circle cx="8" cy="8" r="1.8"/><path d="M3 13L13 3"/></svg></button>
       <button class="pane-btn pane-close" data-key-action="closePane" data-tip-text="Paneli kapat"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>`;
     actions.addEventListener('mousedown', (e) => e.stopPropagation(), true);
+    actions.querySelector('.pane-zoom').addEventListener('click', (e) => { e.stopPropagation(); toggleZoom(this); });
     actions.querySelector('.pane-hide').addEventListener('click', (e) => { e.stopPropagation(); hidePane(this); });
     actions.querySelector('.pane-close').addEventListener('click', (e) => { e.stopPropagation(); closePane(this); });
     this.el.appendChild(actions);
@@ -1427,8 +1429,55 @@ api.onNotifyClick((id) => {
 });
 
 // ---------- Panel işlemleri ----------
+// ---------- Paneli büyütme ----------
+// Büyütülen panel sekmenin tamamını kaplar (styles.css .zoom-target). Yerinde aynı boyutta boş bir yer tutucu
+// (zoomHole) kalır; böylece diğer paneller yerinde ve aynı boyutta gizli bekler, arkadaki programlar
+// (Claude Code vb.) yeniden boyutlanıp ekranlarını baştan çizmez
+function setZoom(tab, pane) {
+  if (!tab || tab.zoomed === (pane || null)) return;
+  const old = tab.zoomed;
+  if (old) {
+    old.el.classList.remove('zoom-target');
+    old.zoomHole?.remove();
+    old.zoomHole = null;
+    setZoomTip(old, false);
+  }
+  tab.zoomed = pane || null;
+  tab.el.classList.toggle('zoomed', !!pane);
+  tab.tabEl.classList.toggle('zoomed', !!pane);
+  if (pane) {
+    const hole = document.createElement('div');
+    hole.className = 'zoom-hole';
+    hole.style.flex = pane.el.style.flex;
+    pane.el.after(hole);
+    pane.zoomHole = hole;
+    pane.el.classList.add('zoom-target');
+    setZoomTip(pane, true);
+    animate(pane.el, 'zoom-in');
+  }
+}
+function setZoomTip(pane, zoomed) {
+  const btn = pane.el.querySelector('.pane-zoom');
+  btn.dataset.tipText = zoomed ? 'Eski boyutuna döndür' : 'Paneli büyüt';
+  paintKeyTips(pane.el);
+}
+const unzoom = (tab) => setZoom(tab, null);
+
+// Seçili paneli büyütür; büyükse eski düzene döndürür. Tek panelde bir şey yapmaz
+function toggleZoom(pane = activeTab?.activePane) {
+  const tab = pane?.tab;
+  if (!tab || !(tab.root instanceof Split)) return;
+  if (tab.zoomed === pane) { unzoom(tab); focusPane(pane); return; }
+  setZoom(tab, pane);
+  focusPane(pane);
+  const key = keysFor('toggleZoom')[0];
+  showToast(key ? t('Panel büyütüldü. Eski düzene dönmek için {key}', { key: KabukKeys.label(key) })
+    : t('Panel büyütüldü. Eski düzene dönmek için sağ üstteki düğme'));
+}
+
 function focusPane(pane) {
   const tab = pane.tab;
+  if (tab.zoomed && tab.zoomed !== pane) unzoom(tab);   // büyükken başka panele geçilirse düzen geri gelir
   tab.activePane = pane;
   for (const p of leaves(tab.root)) p.el.classList.toggle('focused', p === pane);
   syncRenderers();
@@ -1443,6 +1492,7 @@ async function splitPane(dir, before = false) {
   const tab = activeTab;
   const pane = tab?.activePane;
   if (!pane) return;
+  unzoom(tab);
   const cwd = (settings.splitSameDir && paneCwd(pane)) || startCwd();
   const fresh = new Pane(tab);
   fresh.openedFrom = pane;
@@ -1467,6 +1517,7 @@ function closePane(pane) {
   if (!tabs.includes(tab)) return;
   const parent = pane.parent;
   if (!(parent instanceof Split)) { closeTab(tab); return; }
+  unzoom(tab);
   const sibling = parent.a === pane ? parent.b : parent.a;
   pane.dispose();
   replaceNode(parent, sibling);
@@ -1510,6 +1561,7 @@ const hiddenPanes = [];
 function hidePane(pane) {
   const tab = pane.tab;
   if (!tab || !(pane.parent instanceof Split)) return;   // tek panel gizlenmez
+  unzoom(tab);
   const parent = pane.parent;
   const sibling = parent.a === pane ? parent.b : parent.a;
   replaceNode(parent, sibling);
@@ -1539,6 +1591,7 @@ function showHiddenPane(pane, where) {
   } else {
     const tab = activeTab;
     const target = tab.activePane;
+    unzoom(tab);
     pane.tab = tab;
     const split = new Split('row', target, pane);
     replaceNode(target, split);
@@ -1598,7 +1651,9 @@ function moveFocus(dx, dy) {
   const tab = activeTab;
   const cur = tab?.activePane;
   if (!cur) return;
-  const c = cur.el.getBoundingClientRect();
+  // Büyütülmüş panelde yön, panelin düzendeki asıl yerinden (yer tutucu) hesaplanır;
+  // büyütme seçilen panele geçer, böylece paneller arasında büyük haliyle gezilir
+  const c = (cur.zoomHole || cur.el).getBoundingClientRect();
   const cx = c.left + c.width / 2, cy = c.top + c.height / 2;
   let best = null, bestScore = Infinity;
   for (const p of leaves(tab.root)) {
@@ -1611,7 +1666,9 @@ function moveFocus(dx, dy) {
     const score = along + across * 2;
     if (score < bestScore) { bestScore = score; best = p; }
   }
-  if (best) focusPane(best);
+  if (!best) return;
+  if (tab.zoomed) setZoom(tab, best);
+  focusPane(best);
 }
 
 // ---------- Kısayollar ----------
@@ -1642,6 +1699,7 @@ const RUN = {
   },
   paste: () => activeTab?.activePane?.paste(),
   find: () => activeTab?.activePane?.openSearch(),
+  toggleZoom: () => toggleZoom(),
   fontUp: () => setFontSize(settings.fontSize + 1),
   fontDown: () => setFontSize(settings.fontSize - 1),
   fontReset: () => setFontSize(DEFAULTS.fontSize),
