@@ -213,6 +213,16 @@ Eklentinin hatası: aynı kelimede seçenek (Aa) ya da renk değişince eski boy
 büyütmeyi kaldırır, yalnızca Ctrl+Alt+ok (`moveFocus`) büyütmeyi yeni panele taşır. Tek panelde bir şey yapmaz.
 Oturuma kaydedilmez.
 
+## Dosya sürükle-bırak
+
+Yol `api.pathForFile` (preload, `webUtils.getPathForFile`; Electron'da `File.path` yok). `window` düzeyinde
+dragover/drop: paneli `paneAt(e.target)` bulur, panel yoksa dosya bırakmayı engeller (sayfa dosyayı açmasın), yazı
+sürüklemeyi Ayarlar'daki kutulara bırakır. Panel vurgusu `.drop-target` (`.term-host::after`, yazısı `data-drop-label`).
+`dropText`: `atShellLine()` (istem + yazılan) ise `shellKind`'e göre `quotePath` (PowerShell tek tırnak, cmd çift
+tırnak, bash `/c/...` ya da WSL `/mnt/c/...` + tek tırnak) ve sona boşluk; değilse program (Claude Code) sayılır,
+yalnızca boşlukta çift tırnak. `term.paste` ile yazılır (çalıştırılmaz). Testte `pathOf` değiştirilip sentetik
+DragEvent gönderilir; Gezgin'den gerçek sürükleme otomatikleşmiyor.
+
 ## Takma adlar
 
 Ayarlar > Takma adlar (`settings.aliases`: `{ name, command }`). Enter'da satırın ilk kelimesi bir takma adsa

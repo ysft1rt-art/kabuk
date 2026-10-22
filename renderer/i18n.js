@@ -303,6 +303,7 @@ const EN = {
   'Yazıyı küçült': 'Decrease font size',
   'Yazı boyutunu sıfırla': 'Reset font size',
   'Terminalde ara': 'Find in terminal',
+  'Bırak: yolu buraya yazılır': 'Drop to type the path here',
   'Paneli büyüt / eski boyutuna döndür': 'Maximize / restore pane',
   'Bölünmüş ekranda seçili panel bütün sekmeyi kaplar; diğerleri arkada çalışmaya devam eder.': 'In a split view the selected pane fills the whole tab; the others keep running behind it.',
   'Paneli büyüt': 'Maximize pane',

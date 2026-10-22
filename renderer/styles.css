@@ -246,6 +246,25 @@ body.tab-dragging, body.tab-dragging * { cursor: default !important; }
 .pane-hide:hover { color: var(--accent); border-color: var(--accent); }
 .pane-close:hover { color: #fff; background: #e5484d; border-color: #e5484d; }
 
+/* Dosya sürüklenirken üzerinde durulan panel: kesikli çerçeve ve ortada "Bırak" yazısı */
+.pane.drop-target .term-host::after {
+  content: attr(data-drop-label);
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  animation: drop-in .12s ease-out;
+}
+@keyframes drop-in { from { opacity: 0; } }
+
 /* Büyütülmüş panel (Ctrl+Shift+Z): sekmenin tamamını kaplar. Diğer paneller ve ayraçlar yerinde, aynı boyutta
    görünmez bekler (yeniden boyutlanmasınlar diye); büyütülen panelin yerinde boş bir yer tutucu (.zoom-hole) kalır */
 .zoom-hole { min-width: 0; min-height: 0; }

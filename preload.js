@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('kabuk', {
   listShells: () => ipcRenderer.invoke('shells:list'),
@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('kabuk', {
   onExit: (cb) => ipcRenderer.on('pty:exit', (_e, id, code) => cb(id, code)),
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   writeClipboard: (text) => ipcRenderer.send('clipboard:write', text),
+  // Sürükleyip bırakılan dosyanın diskteki yolu (Electron'da File.path artık yok)
+  pathForFile: (file) => webUtils.getPathForFile(file),
   openLink: (url) => ipcRenderer.send('link:open', url),
   setChrome: (opts) => ipcRenderer.send('window:chrome', opts),
   closeWindow: (force = false) => ipcRenderer.send('window:close', force),

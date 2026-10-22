@@ -633,6 +633,14 @@ class Pane {
     if (text) { this.touched = true; this.term.paste(text); }
   }
 
+  // Kabuğun komut satırında mı (istem + belki yazılmış bir şey)? Değilse içeride bir program
+  // (Claude Code vb.) çalışıyor. PowerShell "PS C:\>", cmd "C:\>", bash "$ " ya da "ad@makine:~$ "
+  atShellLine() {
+    const b = this.term.buffer.active;
+    if (b.type !== 'normal') return false;
+    return /^(PS [^>]*>|[A-Za-z]:\\[^>]*>|\S*[$#] )/.test(this.lineBeforeCursor());
+  }
+
   // Gizliyken DOM dışındaydı; geri gelince boyutla ve yeniden çiz
   reattached() {
     requestAnimationFrame(() => {
@@ -1348,6 +1356,93 @@ function bashToWindows(p) {
   const m = /^\/([a-zA-Z])(\/.*)?$/.exec(p);
   return m ? `${m[1].toUpperCase()}:${(m[2] || '\\').replace(/\//g, '\\')}` : null;
 }
+
+// ---------- Dosya sürükle-bırak ----------
+// Bırakılan dosya/klasörlerin yolları panele yazılır (çalıştırılmaz). Kabuğun komut satırındaysa o kabuğun
+// kurallarıyla tırnaklanır, içeride bir program çalışıyorsa (Claude Code vb.) Windows Terminal gibi:
+// yalnızca boşluk varsa çift tırnak
+const isWsl = (pane) => /(^|[\\/])wsl(\.exe)?$/i.test(settings.customShells.find((c) => c.id === pane.shellId)?.file || '');
+
+function windowsToBash(p, wsl) {
+  const m = /^([a-zA-Z]):[\\/]?(.*)$/.exec(p);
+  if (!m) return p.replace(/\\/g, '/');   // \\sunucu\paylaşım → //sunucu/paylaşım
+  const rest = m[2].replace(/\\/g, '/');
+  return (wsl ? '/mnt/' : '/') + m[1].toLowerCase() + (rest ? '/' + rest : '');
+}
+
+function quotePath(p, kind, wsl = false) {
+  switch (kind) {
+    case 'powershell':
+      // Tek tırnak: içindeki $ ve ` değişken sayılmaz; ' ise '' yazılır
+      return /[\s'"`$&(){}[\];,@#|<>]/.test(p) ? `'${p.replace(/'/g, "''")}'` : p;
+    case 'cmd':
+      return /[\s&()^%!,;=]/.test(p) ? `"${p}"` : p;
+    case 'bash': {
+      const u = windowsToBash(p, wsl);
+      return /^[\w@%+=:,./-]+$/.test(u) ? u : `'${u.replace(/'/g, `'\\''`)}'`;
+    }
+    default:
+      return /\s/.test(p) ? `"${p}"` : p;
+  }
+}
+
+function dropText(pane, paths) {
+  const kind = pane.atShellLine() ? shellKind(pane) : 'program';
+  const text = paths.map((p) => quotePath(p, kind, isWsl(pane))).join(' ');
+  // Komut satırında arkasına boşluk: yazmaya devam etmek kolay olsun
+  return kind === 'program' ? text : text + ' ';
+}
+
+let pathOf = (file) => api.pathForFile(file);   // testte değiştirilebilsin diye değişken
+const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+let dropPane = null;
+
+function setDropPane(pane) {
+  if (dropPane === pane) return;
+  dropPane?.el.classList.remove('drop-target');
+  dropPane = pane;
+  if (pane) {
+    pane.host.dataset.dropLabel = t('Bırak: yolu buraya yazılır');
+    pane.el.classList.add('drop-target');
+  }
+}
+
+// Panel bulunamazsa (sekme çubuğu, Ayarlar) bırakmaya izin verme; Ayarlar'daki yazı kutularına
+// sürüklenen yazı ise tarayıcının kendi davranışıyla yazılsın
+function paneAt(target) {
+  const el = target?.closest?.('.pane');
+  if (!el) return null;
+  let found = null;
+  forEachPane((p) => { if (p.el === el && p.tab) found = p; });
+  return found;
+}
+
+window.addEventListener('dragover', (e) => {
+  const pane = paneAt(e.target);
+  if (!pane && !hasFiles(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = pane ? 'copy' : 'none';
+  setDropPane(pane);
+});
+window.addEventListener('dragleave', (e) => { if (!e.relatedTarget) setDropPane(null); });
+window.addEventListener('dragend', () => setDropPane(null));
+window.addEventListener('drop', (e) => {
+  const pane = paneAt(e.target);
+  setDropPane(null);
+  if (!pane && !hasFiles(e)) return;
+  e.preventDefault();
+  if (!pane?.ptyId) return;
+  const files = [...(e.dataTransfer.files || [])];
+  const paths = files.map((f) => pathOf(f)).filter(Boolean);
+  let text = '';
+  if (paths.length) text = dropText(pane, paths);
+  else if (!files.length) text = e.dataTransfer.getData('text/plain');   // tarayıcıdan sürüklenen yazı
+  if (pane.tab !== activeTab || pane.tab.activePane !== pane) focusPane(pane);
+  else pane.term.focus();
+  if (!text) return;
+  pane.touched = true;
+  pane.term.paste(text);
+});
 
 // ---------- Kısa bildirim ----------
 function showToast(text) {

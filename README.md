@@ -39,6 +39,7 @@
 - **Sekmeler:** Sürükleyerek sırala, Ctrl+Tab ile aralarında gez.
 - **Gizli terminaller:** Bir paneli kapatmadan gizle; arka planda çalışmaya devam eder, üst çubuktaki "Gizli" düğmesinden geri getirilir.
 - **Paneli büyütme:** Bölünmüş ekranda `Ctrl+Shift+Z` ile seçili panel bütün sekmeyi kaplar, aynı tuşla eski düzene döner. Diğer paneller arkada çalışmaya devam eder.
+- **Dosya sürükle-bırak:** Gezgin'den bir dosyayı ya da klasörü panele sürükle; yolu oraya yazılır. Yol, paneldeki kabuğa göre (PowerShell, cmd, Git Bash, WSL) doğru tırnaklanır; Claude Code gibi bir program çalışıyorsa olduğu gibi yazılır.
 - **Ctrl+Z ile geri al:** Yanlışlıkla açtığın yeni paneli, içine bir şey yazmadıysan Ctrl+Z ile kapatırsın.
 - **Terminalde arama:** `Ctrl+F` ile çıktının içinde ara; bütün eşleşmeler boyanır, kaçıncısında olduğun görünür. Enter yukarı, Shift+Enter aşağı gider.
 - **26 tema:** Her birinin koyu ve açık hali var (Kar, Catppuccin, Nord, Rosé Pine, Kanagawa, Solarized, One Dark / Light ve daha fazlası). Koyu/açık seçimi Windows'a uyabilir.

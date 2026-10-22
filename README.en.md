@@ -41,6 +41,7 @@
 - **Tabs:** Reorder by dragging, switch with Ctrl+Tab.
 - **Hidden terminals:** Hide a pane without closing it. It keeps running in the background and comes back from the "Hidden" button in the top bar.
 - **Maximize a pane:** In a split view, `Ctrl+Shift+Z` makes the selected pane fill the whole tab; the same key restores the layout. The other panes keep running behind it.
+- **Drag and drop files:** Drag a file or folder from Explorer onto a pane and its path is typed there. The path is quoted for the pane's shell (PowerShell, cmd, Git Bash, WSL); if a program like Claude Code is running, it is typed as is.
 - **Undo with Ctrl+Z:** Opened a new pane by mistake? If you haven't typed in it yet, Ctrl+Z closes it.
 - **Find in terminal:** `Ctrl+F` searches the output; every match is highlighted and you see which one you're on. Enter goes up, Shift+Enter goes down.
 - **26 themes:** Each with a dark and a light variant (Kar, Catppuccin, Nord, Rosé Pine, Kanagawa, Solarized, One Dark / Light and more). Dark/light can follow Windows.
